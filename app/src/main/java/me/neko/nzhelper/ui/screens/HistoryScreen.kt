@@ -5,28 +5,53 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import com.google.gson.Gson
+import com.google.gson.JsonParser
+import me.neko.nzhelper.data.Session
+import me.neko.nzhelper.data.SessionRepository
+import java.io.OutputStreamWriter
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import androidx.core.content.edit
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonParser
-import java.io.BufferedReader
-import java.io.OutputStreamWriter
 
 @SuppressLint("DefaultLocale")
 private fun formatTime(totalSeconds: Int): String {
@@ -38,8 +63,6 @@ private fun formatTime(totalSeconds: Int): String {
         append(String.format("%02d:%02d", minutes, seconds))
     }
 }
-
-data class Session(val timestamp: LocalDateTime, val duration: Int, val remark: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +76,7 @@ fun HistoryScreen() {
     var showMenu by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
     var sessionToDelete by remember { mutableStateOf<Session?>(null) }
+    var sessionToView by remember { mutableStateOf<Session?>(null) }
 
     // 导出 Launcher
     val exportLauncher = rememberLauncherForActivityResult(
@@ -61,9 +85,18 @@ fun HistoryScreen() {
         uri?.let {
             context.contentResolver.openOutputStream(it)?.use { os ->
                 OutputStreamWriter(os).use { writer ->
-                    // 序列化 [time, duration, remark]
+                    // 序列化
                     val outList = sessions.map { s ->
-                        listOf(s.timestamp.format(formatter), s.duration, s.remark)
+                        listOf(
+                            s.timestamp.format(formatter),
+                            s.duration,
+                            s.remark,
+                            s.location,
+                            s.watchedMovie,
+                            s.climax,
+                            s.rating,
+                            s.mood
+                        )
                     }
                     writer.write(gson.toJson(outList))
                 }
@@ -76,38 +109,57 @@ fun HistoryScreen() {
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let {
-            context.contentResolver.openInputStream(it)?.bufferedReader()?.use(BufferedReader::readText)?.let { jsonIn ->
-                // 兼容新版三元组
-                val root: JsonArray = JsonParser.parseString(jsonIn).asJsonArray
-                sessions.clear()
-                root.forEach { elem: JsonElement ->
-                    if (elem.isJsonArray) {
-                        val arr = elem.asJsonArray
-                        val timeStr = arr[0].asString
-                        val dur = arr[1].asInt
-                        val rem = if (arr.size() >= 3 && !arr[2].isJsonNull) arr[2].asString else ""
-                        sessions.add(Session(LocalDateTime.parse(timeStr, formatter), dur, rem))
+            context.contentResolver.openInputStream(it)
+                ?.bufferedReader()
+                ?.use { reader ->
+                    val jsonStr = reader.readText()
+                    val root = JsonParser.parseString(jsonStr).asJsonArray
+
+                    sessions.clear()
+
+                    for (elem in root) {
+                        if (elem.isJsonArray) {
+                            val arr = elem.asJsonArray
+                            val timeStr = arr[0].asString
+                            val dur = if (arr.size() >= 2) arr[1].asInt else 0
+                            val rem =
+                                if (arr.size() >= 3 && !arr[2].isJsonNull) arr[2].asString else ""
+                            val loc =
+                                if (arr.size() >= 4 && !arr[3].isJsonNull) arr[3].asString else ""
+                            val watched = if (arr.size() >= 5) arr[4].asBoolean else false
+                            val climaxed = if (arr.size() >= 6) arr[5].asBoolean else false
+                            val rate =
+                                if (arr.size() >= 7 && !arr[6].isJsonNull) arr[6].asInt else 0
+                            val md =
+                                if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
+
+                            sessions.add(
+                                Session(
+                                    timestamp = LocalDateTime.parse(timeStr, formatter),
+                                    duration = dur,
+                                    remark = rem,
+                                    location = loc,
+                                    watchedMovie = watched,
+                                    climax = climaxed,
+                                    rating = rate,
+                                    mood = md
+                                )
+                            )
+                        }
+                    }
+
+                    prefs.edit {
+                        putString("sessions", jsonStr)
                     }
                 }
-                prefs.edit { putString("sessions", gson.toJson(root)) }
-            }
         }
     }
 
     // 读取历史（兼容旧版）
     LaunchedEffect(Unit) {
-        val jsonStr = prefs.getString("sessions", "[]") ?: "[]"
-        val root: JsonArray = JsonParser.parseString(jsonStr).asJsonArray
+        val loaded = SessionRepository.loadSessions(context)
         sessions.clear()
-        root.forEach { elem: JsonElement ->
-            if (elem.isJsonArray) {
-                val arr = elem.asJsonArray
-                val timeStr = arr[0].asString
-                val dur = arr[1].asInt
-                val rem = if (arr.size() >= 3 && !arr[2].isJsonNull) arr[2].asString else ""
-                sessions.add(Session(LocalDateTime.parse(timeStr, formatter), dur, rem))
-            }
-        }
+        sessions.addAll(loaded)
     }
 
     Scaffold(
@@ -149,9 +201,11 @@ fun HistoryScreen() {
             )
         }
     ) { innerPadding ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             if (sessions.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("暂无历史记录", style = MaterialTheme.typography.bodyLarge)
@@ -167,7 +221,8 @@ fun HistoryScreen() {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 0.dp),
-                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
+                            onClick = { sessionToView = session }
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
@@ -176,10 +231,21 @@ fun HistoryScreen() {
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column {
-                                        Text("时间: ${session.timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}")
+                                        Text(
+                                            "时间: ${
+                                                session.timestamp.format(
+                                                    DateTimeFormatter.ofPattern(
+                                                        "yyyy-MM-dd HH:mm:ss"
+                                                    )
+                                                )
+                                            }"
+                                        )
                                         Text("持续: ${formatTime(session.duration)}")
                                         if (session.remark.isNotEmpty()) {
-                                            Text("备注: ${session.remark}", style = MaterialTheme.typography.bodyMedium)
+                                            Text(
+                                                "备注: ${session.remark}",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
                                         }
                                     }
                                     IconButton(onClick = { sessionToDelete = session }) {
@@ -200,7 +266,18 @@ fun HistoryScreen() {
                     confirmButton = {
                         TextButton(onClick = {
                             sessions.remove(sessionToDelete)
-                            prefs.edit {putString("sessions", gson.toJson(sessions.map { listOf(it.timestamp.format(formatter), it.duration, it.remark) }))}
+                            prefs.edit {
+                                putString(
+                                    "sessions",
+                                    gson.toJson(sessions.map {
+                                        listOf(
+                                            it.timestamp.format(formatter),
+                                            it.duration,
+                                            it.remark
+                                        )
+                                    })
+                                )
+                            }
                             sessionToDelete = null
                         }) { Text("确认") }
                     },
@@ -218,12 +295,47 @@ fun HistoryScreen() {
                     confirmButton = {
                         TextButton(onClick = {
                             sessions.clear()
-                            prefs.edit {remove("sessions")}
+                            prefs.edit { remove("sessions") }
                             showClearDialog = false
                         }) { Text("删除") }
                     },
                     dismissButton = {
                         TextButton(onClick = { showClearDialog = false }) { Text("取消") }
+                    }
+                )
+            }
+
+            // 查看详情对话框
+            if (sessionToView != null) {
+                AlertDialog(
+                    onDismissRequest = { sessionToView = null },
+                    title = { Text("会话详情") },
+                    text = {
+                        Column {
+                            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                            Text("开始时间：${sessionToView!!.timestamp.format(pattern)}")
+                            Text("持续时长：${formatTime(sessionToView!!.duration)}")
+                            if (sessionToView!!.remark.isNotEmpty()) {
+                                Text("备注: ${sessionToView!!.remark}")
+                            } else {
+                                Text("备注: 无")
+                            }
+                            if (sessionToView!!.location.isNotEmpty()) {
+                                Text("地点：${sessionToView!!.location}")
+                            } else {
+                                Text("地点: 无")
+                            }
+                            Text("观看小电影：${if (sessionToView!!.watchedMovie) "是" else "否"}")
+                            Text("高潮：${if (sessionToView!!.climax) "是" else "否"}")
+                            Text("评分：${sessionToView!!.rating}/5")
+                            if (sessionToView!!.mood.isNotEmpty())
+                                Text("心情：${sessionToView!!.mood}")
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { sessionToView = null }) {
+                            Text("关闭")
+                        }
                     }
                 )
             }
