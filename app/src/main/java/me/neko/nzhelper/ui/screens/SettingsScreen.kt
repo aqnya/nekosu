@@ -108,6 +108,9 @@ fun AboutDialog(onDismiss: () -> Unit) {
     val url = "https://github.com/zzzdajb/DickHelper"
     val label = "DickHelper"
 
+    val sourceLabel = "GitHub"
+    val sourceUrl = "https://github.com/bug-bit/NzHelper"
+
     val annotated = buildAnnotatedString {
         append("这是一个以开源项目 ")
 
@@ -131,6 +134,26 @@ fun AboutDialog(onDismiss: () -> Unit) {
 
         append(" 作为参考的使用 Kotlin 编写的 App")
     }
+    val viewSource = buildAnnotatedString {
+        append("在 ")
+        val start = length
+        append(sourceLabel)
+        val end = length
+        addStyle(
+            style = SpanStyle(textDecoration = TextDecoration.Underline),
+            start = start,
+            end = end
+        )
+        addLink(
+            LinkAnnotation.Clickable(
+                tag = sourceLabel,
+                linkInteractionListener = { uriHandler.openUri(sourceUrl) }
+            ),
+            start = start,
+            end = end
+        )
+        append(" 查看源码")
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -140,6 +163,8 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 Text("版本：$versionName")
                 Spacer(Modifier.height(8.dp))
                 Text(text = annotated, style = TextStyle())
+                Spacer(Modifier.height(8.dp))
+                Text(text = viewSource, style = TextStyle())
             }
         },
         confirmButton = {
