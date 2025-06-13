@@ -21,16 +21,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -40,10 +44,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,9 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import com.google.gson.Gson
-import com.google.gson.JsonParser
+import kotlinx.coroutines.launch
+import me.neko.nzhelper.data.Session
+import me.neko.nzhelper.data.SessionRepository
 import me.neko.nzhelper.ui.service.TimerService
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -67,9 +73,7 @@ import java.util.Calendar
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("sessions_prefs", Context.MODE_PRIVATE) }
-    val gson = remember { Gson() }
-    val formatter = remember { DateTimeFormatter.ISO_LOCAL_DATE_TIME }
+    val scope = rememberCoroutineScope()
 
     // 绑定 Service
     val serviceIntent = remember { Intent(context, TimerService::class.java) }
@@ -107,39 +111,25 @@ fun HomeScreen() {
     var isRunning by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showRemarkDialog by remember { mutableStateOf(false) }
-    var remarkInput by remember { mutableStateOf("") }
+    var showDetailsDialog by remember { mutableStateOf(false) }
 
     var showCalendar by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    // 会话数据类
-    data class Session(
-        val timestamp: LocalDateTime,
-        val duration: Int,
-        val remark: String
-    )
+    var remarkInput by remember { mutableStateOf("") }
+    var locationInput by remember { mutableStateOf("") }
+    var watchedMovie by remember { mutableStateOf(false) }
+    var climax by remember { mutableStateOf(false) }
+    var rating by remember { mutableFloatStateOf(3f) }
+    var mood by remember { mutableStateOf("平静") }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     val sessions = remember { mutableStateListOf<Session>() }
 
     // 加载历史
     LaunchedEffect(Unit) {
-        val jsonStr = prefs.getString("sessions", "[]") ?: "[]"
-        val root = JsonParser.parseString(jsonStr).asJsonArray
-        for (elem in root) {
-            if (elem.isJsonArray) {
-                val arr = elem.asJsonArray
-                val timeStr = arr[0].asString
-                val dur = arr[1].asInt
-                val rem = if (arr.size() >= 3 && !arr[2].isJsonNull) arr[2].asString else ""
-                sessions.add(
-                    Session(
-                        LocalDateTime.parse(timeStr, formatter),
-                        dur,
-                        rem
-                    )
-                )
-            }
-        }
+        val loaded = SessionRepository.loadSessions(context)
+        sessions.clear()
+        sessions.addAll(loaded)
     }
 
     // 控制 Service 启停
@@ -386,26 +376,123 @@ fun HomeScreen() {
                     text = { Text("要结束对牛牛的爱抚了吗？") },
                     confirmButton = {
                         TextButton(onClick = {
-                            val nowTime = LocalDateTime.now()
-                            sessions.add(Session(nowTime, elapsedSeconds, remarkInput))
-                            val saveList = sessions.map { s ->
-                                listOf(
-                                    s.timestamp.format(formatter),
-                                    s.duration,
-                                    s.remark
-                                )
-                            }
-                            prefs.edit { putString("sessions", gson.toJson(saveList)) }
-                            isRunning = false
-                            remarkInput = ""
                             showConfirmDialog = false
-                            context.startService(
-                                serviceIntent.apply { action = TimerService.ACTION_STOP }
-                            )
+                            showDetailsDialog = true
                         }) { Text("燃尽了") }
                     },
                     dismissButton = {
                         TextButton(onClick = { showConfirmDialog = false }) { Text("再坚持一下") }
+                    }
+                )
+            }
+
+            if (showDetailsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDetailsDialog = false },
+                    title = { Text("填写本次信息") },
+                    text = {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                        ) {
+                            Text("起飞地点：")
+                            TextField(
+                                value = locationInput,
+                                onValueChange = { locationInput = it },
+                                placeholder = { Text("例如：卧室") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = watchedMovie,
+                                    onCheckedChange = { watchedMovie = it })
+                                Spacer(Modifier.width(4.dp))
+                                Text("观看小电影")
+                                Spacer(
+                                    Modifier
+                                        .width(16.dp)
+                                )
+                                Checkbox(
+                                    checked = climax,
+                                    onCheckedChange = {
+                                        climax = it
+                                    }
+                                )
+                                Spacer(
+                                    Modifier
+                                        .width(4.dp)
+                                )
+                                Text("是否高潮")
+                            }
+                            Spacer(Modifier.height(12.dp))
+
+                            Text("评分（0–5 分）：${rating.toInt()} 分")
+                            Slider(
+                                value = rating,
+                                onValueChange = { rating = it },
+                                valueRange = 0f..5f,
+                                steps = 5,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Text("心情：")
+                            val moods = listOf("平静", "愉悦", "兴奋", "疲惫", "这是最后一次！")
+                            moods.forEach { m ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(
+                                        selected = (mood == m),
+                                        onClick = { mood = m }
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(m)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            // 构造 Session 对象
+                            val now = LocalDateTime.now()
+                            val session = Session(
+                                timestamp = now,
+                                duration = elapsedSeconds,
+                                remark = remarkInput,
+                                location = locationInput,
+                                watchedMovie = watchedMovie,
+                                climax = climax,
+                                rating = rating.toInt(),
+                                mood = mood
+                            )
+                            // 更新本地列表
+                            sessions.add(session)
+
+                            // 异步持久化
+                            scope.launch {
+                                SessionRepository.saveSessions(context, sessions)
+                            }
+
+                            // 重置 UI 状态
+                            isRunning = false
+                            remarkInput = ""
+                            locationInput = ""
+                            watchedMovie = false
+                            climax = false
+                            rating = 3f
+                            mood = "平静"
+                            showDetailsDialog = false
+
+                            // 停止服务
+                            context.startService(
+                                serviceIntent.apply { action = TimerService.ACTION_STOP }
+                            )
+                        }) { Text("确认") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDetailsDialog = false }) { Text("取消") }
                     }
                 )
             }
