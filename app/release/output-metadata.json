@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 4,
-      "versionName": "0.0.4-alpha",
-      "outputFile": "app-release.apk"
+      "versionCode": 14,
+      "versionName": "0.0.5-alpha.r14.e2fb6ce",
+      "outputFile": "NzHelper_v0.0.5-alpha.r14.e2fb6ce.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/app-release.dm"
+        "baselineProfiles/1/NzHelper_v0.0.5-alpha.r14.e2fb6ce.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/app-release.dm"
+        "baselineProfiles/0/NzHelper_v0.0.5-alpha.r14.e2fb6ce.dm"
       ]
     }
   ],
