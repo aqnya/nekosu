@@ -8,26 +8,12 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
-/.idea/*
-!/.idea/gradle.xml
-!/.idea/inspectionProfiles
-
-# Build output
 /build/
 **/build/
 **/release/
 **/outputs/
 *.apk
 *.aab
-
-# NDK / Native
-.cxx/
-.externalNativeBuild/
-
-# Others
-/captures/
