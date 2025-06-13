@@ -109,7 +109,6 @@ fun HomeScreen() {
     var showRemarkDialog by remember { mutableStateOf(false) }
     var remarkInput by remember { mutableStateOf("") }
 
-    // 日历查看状态
     var showCalendar by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
