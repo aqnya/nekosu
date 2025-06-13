@@ -95,7 +95,8 @@ fun HistoryScreen() {
                             s.watchedMovie,
                             s.climax,
                             s.rating,
-                            s.mood
+                            s.mood,
+                            s.props
                         )
                     }
                     writer.write(gson.toJson(outList))
@@ -131,9 +132,8 @@ fun HistoryScreen() {
                             val rate = if (arr.size() >= 7 && !arr[6].isJsonNull) {
                                 arr[6].asFloat.coerceIn(0f, 5f) // 确保在范围内
                             } else 0f
-                            val md =
-                                if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
-
+                            val md = if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
+                            val prop = if (arr.size() >= 9 && !arr[8].isJsonNull) arr[8].asString else ""
                             sessions.add(
                                 Session(
                                     timestamp = LocalDateTime.parse(timeStr, formatter),
@@ -143,7 +143,8 @@ fun HistoryScreen() {
                                     watchedMovie = watched,
                                     climax = climaxed,
                                     rating = rate,
-                                    mood = md
+                                    mood = md,
+                                    props = prop
                                 )
                             )
                         }
@@ -328,6 +329,8 @@ fun HistoryScreen() {
                             }
                             Text("观看小电影：${if (sessionToView!!.watchedMovie) "是" else "否"}")
                             Text("高潮：${if (sessionToView!!.climax) "是" else "否"}")
+                            if (sessionToView!!.props.isNotEmpty())
+                                Text("道具：${sessionToView!!.props}")
                             Text("评分：${"%.1f".format(sessionToView!!.rating)} / 5.0")
                             if (sessionToView!!.mood.isNotEmpty())
                                 Text("心情：${sessionToView!!.mood}")

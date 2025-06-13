@@ -18,7 +18,8 @@ data class Session(
     val watchedMovie: Boolean,
     val climax: Boolean,
     val rating: Float,
-    val mood: String
+    val mood: String,
+    val props: String
 )
 
 // 序列化/反序列化和持久化
@@ -49,6 +50,7 @@ object SessionRepository {
                     arr[6].asFloat.coerceIn(0f, 5f) // 确保在范围内
                 } else 0f
                 val md = if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
+                val prop = if (arr.size() >= 9 && !arr[8].isJsonNull) arr[8].asString else ""
                 list.add(
                     Session(
                         timestamp = LocalDateTime.parse(timeStr, formatter),
@@ -58,7 +60,8 @@ object SessionRepository {
                         watchedMovie = watched,
                         climax = climaxed,
                         rating = rate,
-                        mood = md
+                        mood = md,
+                        props = prop
                     )
                 )
             }
@@ -82,7 +85,8 @@ object SessionRepository {
                         session.watchedMovie,
                         session.climax,
                         session.rating,
-                        session.mood
+                        session.mood,
+                        session.props
                     )
                 }
                 val jsonStr = gson.toJson(jsonArray)

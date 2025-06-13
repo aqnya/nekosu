@@ -123,6 +123,7 @@ fun HomeScreen() {
     var climax by remember { mutableStateOf(false) }
     var rating by remember { mutableFloatStateOf(3f) }
     var mood by remember { mutableStateOf("平静") }
+    var props by remember { mutableStateOf("Hand Job") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     val sessions = remember { mutableStateListOf<Session>() }
@@ -411,6 +412,29 @@ fun HomeScreen() {
                             }
                             Spacer(Modifier.height(12.dp))
 
+                            Text("道具：")
+                            val prop = listOf("Hand Job", "飞机杯", "充气娃娃")
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                prop.forEach { p ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.widthIn(max = 150.dp) // 控制每项最大宽度
+                                    ) {
+                                        RadioButton(
+                                            selected = (props == p),
+                                            onClick = { props = p }
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(p)
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(12.dp))
+
                             Text("评分：${"%.1f".format(rating)}") // 显示1位小数
                             Slider(
                                 value = rating,
@@ -464,7 +488,8 @@ fun HomeScreen() {
                                 watchedMovie = watchedMovie,
                                 climax = climax,
                                 rating = rating.toFloat(),
-                                mood = mood
+                                mood = mood,
+                                props = props
                             )
                             // 更新本地列表
                             sessions.add(session)
@@ -482,6 +507,7 @@ fun HomeScreen() {
                             climax = false
                             rating = 3f
                             mood = "平静"
+                            props = "Hand Job"
                             showDetailsDialog = false
 
                             // 停止服务
