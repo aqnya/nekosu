@@ -66,7 +66,7 @@ android {
         buildConfig = true
     }
 
-    //构建时的包名
+    // 构建时的包名
     android.applicationVariants.all {
         outputs.all {
             if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
