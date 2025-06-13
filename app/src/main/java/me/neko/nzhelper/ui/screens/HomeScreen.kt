@@ -399,7 +399,6 @@ fun HomeScreen() {
                             isRunning = false
                             remarkInput = ""
                             showConfirmDialog = false
-                            // 停止 Service
                             context.startService(
                                 serviceIntent.apply { action = TimerService.ACTION_STOP }
                             )
