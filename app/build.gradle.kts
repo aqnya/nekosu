@@ -4,6 +4,28 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+fun getGitCommitCount(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().readText().trim().toInt()
+    } catch (_: Exception) {
+        1 // fallback
+    }
+}
+
+fun getGitShortHash(): String {
+    return try {
+        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().readText().trim()
+    } catch (_: Exception) {
+        "unknown"
+    }
+}
+
 android {
     namespace = "me.neko.nzhelper"
     compileSdk = 36
@@ -12,8 +34,12 @@ android {
         applicationId = "me.neko.nzhelper"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.0.4-alpha"
+
+        val commitCount = getGitCommitCount()
+        val gitHash = getGitShortHash()
+
+        versionCode = getGitCommitCount()
+        versionName = "0.0.5-alpha.r$commitCount.$gitHash"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -21,6 +47,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true // 移除无用资源
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -38,6 +65,18 @@ android {
         compose = true
         buildConfig = true
     }
+
+    //构建时的包名
+    android.applicationVariants.all {
+        outputs.all {
+            if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
+                val config = project.android.defaultConfig
+                val versionName = config.versionName
+                this.outputFileName = "NzHelper_v${versionName}.apk"
+            }
+        }
+    }
+
 }
 
 dependencies {
