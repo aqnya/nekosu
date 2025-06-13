@@ -128,8 +128,9 @@ fun HistoryScreen() {
                                 if (arr.size() >= 4 && !arr[3].isJsonNull) arr[3].asString else ""
                             val watched = if (arr.size() >= 5) arr[4].asBoolean else false
                             val climaxed = if (arr.size() >= 6) arr[5].asBoolean else false
-                            val rate =
-                                if (arr.size() >= 7 && !arr[6].isJsonNull) arr[6].asInt else 0
+                            val rate = if (arr.size() >= 7 && !arr[6].isJsonNull) {
+                                arr[6].asFloat.coerceIn(0f, 5f) // 确保在范围内
+                            } else 0f
                             val md =
                                 if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
 
@@ -316,18 +317,18 @@ fun HistoryScreen() {
                             Text("开始时间：${sessionToView!!.timestamp.format(pattern)}")
                             Text("持续时长：${formatTime(sessionToView!!.duration)}")
                             if (sessionToView!!.remark.isNotEmpty()) {
-                                Text("备注: ${sessionToView!!.remark}")
+                                Text("备注：${sessionToView!!.remark}")
                             } else {
-                                Text("备注: 无")
+                                Text("备注：无")
                             }
                             if (sessionToView!!.location.isNotEmpty()) {
                                 Text("地点：${sessionToView!!.location}")
                             } else {
-                                Text("地点: 无")
+                                Text("地点：无")
                             }
                             Text("观看小电影：${if (sessionToView!!.watchedMovie) "是" else "否"}")
                             Text("高潮：${if (sessionToView!!.climax) "是" else "否"}")
-                            Text("评分：${sessionToView!!.rating}/5")
+                            Text("评分：${"%.1f".format(sessionToView!!.rating)} / 5.0")
                             if (sessionToView!!.mood.isNotEmpty())
                                 Text("心情：${sessionToView!!.mood}")
                         }

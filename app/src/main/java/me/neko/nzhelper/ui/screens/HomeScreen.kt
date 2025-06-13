@@ -13,6 +13,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -69,7 +72,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
@@ -110,7 +113,6 @@ fun HomeScreen() {
 
     var isRunning by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
-    var showRemarkDialog by remember { mutableStateOf(false) }
     var showDetailsDialog by remember { mutableStateOf(false) }
 
     var showCalendar by remember { mutableStateOf(false) }
@@ -249,8 +251,7 @@ fun HomeScreen() {
 
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(onClick = {
-                                if (!isRunning) showRemarkDialog = true
-                                else isRunning = false
+                                isRunning = !isRunning
                             }) {
                                 Text(if (isRunning) "暂停" else "开始")
                             }
@@ -338,36 +339,6 @@ fun HomeScreen() {
                 )
             }
 
-            // 备注对话框
-            if (showRemarkDialog) {
-                AlertDialog(
-                    onDismissRequest = { showRemarkDialog = false },
-                    title = { Text("备注（可选）") },
-                    text = {
-                        TextField(
-                            value = remarkInput,
-                            onValueChange = { remarkInput = it },
-                            placeholder = { Text("有什么想说的？") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            showRemarkDialog = false
-                            isRunning = true
-                        }) { Text("确认") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            remarkInput = ""
-                            showRemarkDialog = false
-                            isRunning = true
-                        }) { Text("跳过") }
-                    }
-                )
-            }
-
             // 结束对话框
             if (showConfirmDialog) {
                 AlertDialog(
@@ -378,6 +349,7 @@ fun HomeScreen() {
                         TextButton(onClick = {
                             showConfirmDialog = false
                             showDetailsDialog = true
+                            isRunning = false // 自动暂停计时
                         }) { Text("燃尽了") }
                     },
                     dismissButton = {
@@ -395,7 +367,17 @@ fun HomeScreen() {
                             Modifier
                                 .fillMaxWidth()
                         ) {
-                            Text("起飞地点：")
+                            Text("备注（可选）")
+                            TextField(
+                                value = remarkInput,
+                                onValueChange = { remarkInput = it },
+                                placeholder = { Text("有什么想说的？") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Text("起飞地点（可选）")
                             TextField(
                                 value = locationInput,
                                 onValueChange = { locationInput = it },
@@ -429,26 +411,43 @@ fun HomeScreen() {
                             }
                             Spacer(Modifier.height(12.dp))
 
-                            Text("评分（0–5 分）：${rating.toInt()} 分")
+                            Text("评分：${"%.1f".format(rating)}") // 显示1位小数
                             Slider(
                                 value = rating,
                                 onValueChange = { rating = it },
                                 valueRange = 0f..5f,
-                                steps = 5,
+                                steps = 25,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            // 显示最小/最大值
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("0")
+                                Text("5.0")
+                            }
                             Spacer(Modifier.height(12.dp))
 
                             Text("心情：")
                             val moods = listOf("平静", "愉悦", "兴奋", "疲惫", "这是最后一次！")
-                            moods.forEach { m ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    RadioButton(
-                                        selected = (mood == m),
-                                        onClick = { mood = m }
-                                    )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(m)
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                moods.forEach { m ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.widthIn(max = 150.dp) // 控制每项最大宽度
+                                    ) {
+                                        RadioButton(
+                                            selected = (mood == m),
+                                            onClick = { mood = m }
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(m)
+                                    }
                                 }
                             }
                         }
@@ -464,7 +463,7 @@ fun HomeScreen() {
                                 location = locationInput,
                                 watchedMovie = watchedMovie,
                                 climax = climax,
-                                rating = rating.toInt(),
+                                rating = rating.toFloat(),
                                 mood = mood
                             )
                             // 更新本地列表

@@ -17,7 +17,7 @@ data class Session(
     val location: String,
     val watchedMovie: Boolean,
     val climax: Boolean,
-    val rating: Int,
+    val rating: Float,
     val mood: String
 )
 
@@ -45,7 +45,9 @@ object SessionRepository {
                 val loc = if (arr.size() >= 4 && !arr[3].isJsonNull) arr[3].asString else ""
                 val watched = if (arr.size() >= 5) arr[4].asBoolean else false
                 val climaxed = if (arr.size() >= 6) arr[5].asBoolean else false
-                val rate = if (arr.size() >= 7 && !arr[6].isJsonNull) arr[6].asInt else 0
+                val rate = if (arr.size() >= 7 && !arr[6].isJsonNull) {
+                    arr[6].asFloat.coerceIn(0f, 5f) // 确保在范围内
+                } else 0f
                 val md = if (arr.size() >= 8 && !arr[7].isJsonNull) arr[7].asString else ""
                 list.add(
                     Session(
