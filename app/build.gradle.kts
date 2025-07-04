@@ -39,7 +39,7 @@ android {
         val gitHash = getGitShortHash()
 
         versionCode = getGitCommitCount()
-        versionName = "0.0.9-alpha.r$commitCount.$gitHash"
+        versionName = "0.0.10-alpha.r$commitCount.$gitHash"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
