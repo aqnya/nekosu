@@ -1,5 +1,6 @@
 package me.neko.nzhelper.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,8 +12,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
+import androidx.core.app.NotificationManagerCompat
 import androidx.navigation.compose.rememberNavController
 import me.neko.nzhelper.BuildConfig
 import androidx.core.net.toUri
@@ -48,6 +52,22 @@ fun BottomNavigationBar(navController: NavController) {
 fun MainScreen() {
     val navController = rememberNavController()
     val context = LocalContext.current
+
+    // 检查通知权限
+    val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    var showNotifyDialog by remember { mutableStateOf(!notificationsEnabled) }
+
+    // 打开应用通知设置
+    fun openNotificationSettings(context: Context) {
+        val intent = Intent().apply {
+            action =
+                Settings.ACTION_APP_NOTIFICATION_SETTINGS
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            putExtra("app_uid", context.applicationInfo.uid)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
 
     val owner = "bug-bit"
     val repo  = "NzHelper"
@@ -128,6 +148,35 @@ fun MainScreen() {
                 dismissButton = {
                     TextButton(onClick = { showUpdateDialog = false }) {
                         Text("稍后再说")
+                    }
+                }
+            )
+        }
+        if (showNotifyDialog) {
+            AlertDialog(
+                onDismissRequest = { showNotifyDialog = false },
+                title = {
+                    Text(text = "还未开启通知权限")
+                },
+                text = {
+                    Text("为确保应用能在后台继续计时，请授予通知权限！")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            openNotificationSettings(context)
+                            showNotifyDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("去开启")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNotifyDialog = false }) {
+                        Text("以后再说")
                     }
                 }
             )
