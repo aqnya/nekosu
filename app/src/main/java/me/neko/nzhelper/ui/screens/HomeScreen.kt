@@ -9,7 +9,6 @@ import android.os.IBinder
 import android.provider.Settings
 import android.widget.CalendarView
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +18,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -32,9 +35,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -42,6 +45,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,6 +83,7 @@ import java.util.Calendar
 fun HomeScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
     // 绑定 Service
     val serviceIntent = remember { Intent(context, TimerService::class.java) }
@@ -149,8 +156,10 @@ fun HomeScreen() {
         NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
+    var showNotifyDialog by remember { mutableStateOf(!notificationsEnabled) }
+
     // 打开应用通知设置
-    fun openNotificationSettings() {
+    fun openNotificationSettings(context: Context) {
         val intent = Intent().apply {
             action =
                 Settings.ACTION_APP_NOTIFICATION_SETTINGS
@@ -165,14 +174,17 @@ fun HomeScreen() {
         topBar = {
             TopAppBar(
                 title = { Text(text = "牛子小助手") },
-                windowInsets = WindowInsets(0, 0, 0, 0)
+                scrollBehavior = scrollBehavior
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentAlignment = Alignment.Center // Box 控制 LazyColumn 居中
         ) {
 
             // 统计展示
@@ -187,47 +199,12 @@ fun HomeScreen() {
 
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 16.dp),
+                    .fillMaxWidth()
+                    .wrapContentHeight(), // 避免占满整个高度
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-
-                if (!notificationsEnabled) {
-                    item {
-                        ElevatedCard(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 16.dp)
-                                .fillMaxWidth(0.9f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "还未开启通知权限",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Button(
-                                        onClick = { openNotificationSettings() },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.secondary
-                                        )
-                                    ) {
-                                        Text("去开启")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
 
                 item {
                     Column(
@@ -250,7 +227,7 @@ fun HomeScreen() {
                             style = MaterialTheme.typography.displayMedium
                         )
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                             Button(onClick = {
                                 isRunning = !isRunning
                             }) {
@@ -275,14 +252,13 @@ fun HomeScreen() {
                     "今年次数: $yearCount 次"
                 )
                 items(stats) { info ->
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .clickable {
-                                selectedDate = null
-                                showCalendar = true
-                            },
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                    OutlinedCard(
+                        onClick = {
+                            selectedDate = null
+                            showCalendar = true
+                        },
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        border = CardDefaults.outlinedCardBorder()
                     ) {
                         Text(text = info, modifier = Modifier.padding(12.dp))
                     }
@@ -518,6 +494,39 @@ fun HomeScreen() {
                     },
                     dismissButton = {
                         TextButton(onClick = { showDetailsDialog = false }) { Text("取消") }
+                    }
+                )
+            }
+
+            if (showNotifyDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNotifyDialog = false },
+                    title = {
+                        Text(
+                            text = "还未开启通知权限",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    text = {
+                        Text("为确保应用能在后台继续计时，请授予通知权限！")
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                openNotificationSettings(context)
+                                showNotifyDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("去开启")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showNotifyDialog = false }) {
+                            Text("以后再说")
+                        }
                     }
                 )
             }
