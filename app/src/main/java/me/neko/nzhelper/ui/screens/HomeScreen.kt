@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.provider.Settings
 import android.widget.CalendarView
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +31,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,11 +61,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
 import me.neko.nzhelper.data.Session
@@ -146,28 +142,6 @@ fun HomeScreen() {
     LaunchedEffect(isRunning) {
         val action = if (isRunning) TimerService.ACTION_START else TimerService.ACTION_PAUSE
         context.startService(serviceIntent.apply { this.action = action })
-    }
-
-    // 检查通知权限
-    val isPreview = LocalInspectionMode.current
-    val notificationsEnabled = if (isPreview) {
-        true // 预览时跳过检查
-    } else {
-        NotificationManagerCompat.from(context).areNotificationsEnabled()
-    }
-
-    var showNotifyDialog by remember { mutableStateOf(!notificationsEnabled) }
-
-    // 打开应用通知设置
-    fun openNotificationSettings(context: Context) {
-        val intent = Intent().apply {
-            action =
-                Settings.ACTION_APP_NOTIFICATION_SETTINGS
-            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            putExtra("app_uid", context.applicationInfo.uid)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
     }
 
     Scaffold(
@@ -494,39 +468,6 @@ fun HomeScreen() {
                     },
                     dismissButton = {
                         TextButton(onClick = { showDetailsDialog = false }) { Text("取消") }
-                    }
-                )
-            }
-
-            if (showNotifyDialog) {
-                AlertDialog(
-                    onDismissRequest = { showNotifyDialog = false },
-                    title = {
-                        Text(
-                            text = "还未开启通知权限",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    },
-                    text = {
-                        Text("为确保应用能在后台继续计时，请授予通知权限！")
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                openNotificationSettings(context)
-                                showNotifyDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text("去开启")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showNotifyDialog = false }) {
-                            Text("以后再说")
-                        }
                     }
                 )
             }
