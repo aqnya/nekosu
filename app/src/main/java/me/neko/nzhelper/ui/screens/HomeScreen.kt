@@ -234,7 +234,10 @@ fun HomeScreen() {
                         modifier = Modifier.fillMaxWidth(0.8f),
                         border = CardDefaults.outlinedCardBorder()
                     ) {
-                        Text(text = info, modifier = Modifier.padding(12.dp))
+                        Text(
+                            text = info,
+                            modifier = Modifier.padding(12.dp)
+                        )
                     }
                 }
             }

@@ -122,7 +122,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     Text("祝愿所有给我们打赏的小伙伴牛子长度翻倍 ❤️ 您的捐赠将是我们更新的动力")
                     Spacer(Modifier.height(16.dp))
                     Image(
-                        painter = painterResource(id = R.drawable.weixin), //你的二维码资源
+                        painter = painterResource(id = R.drawable.weixin),
                         contentDescription = "QR Code",
                         modifier = Modifier.size(200.dp)
                     )
