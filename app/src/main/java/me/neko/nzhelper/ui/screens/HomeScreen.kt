@@ -36,12 +36,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -126,7 +126,7 @@ fun HomeScreen() {
     var climax by remember { mutableStateOf(false) }
     var rating by remember { mutableFloatStateOf(3f) }
     var mood by remember { mutableStateOf("平静") }
-    var props by remember { mutableStateOf("Hand Job") }
+    var props by remember { mutableStateOf("手") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     val sessions = remember { mutableStateListOf<Session>() }
@@ -312,170 +312,202 @@ fun HomeScreen() {
                 )
             }
 
-            if (showDetailsDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDetailsDialog = false },
-                    title = { Text("填写本次信息") },
-                    text = {
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                        ) {
-                            Text("备注（可选）")
-                            TextField(
-                                value = remarkInput,
-                                onValueChange = { remarkInput = it },
-                                placeholder = { Text("有什么想说的？") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(Modifier.height(12.dp))
+            // 使用 DetailsDialog
+            DetailsDialog(
+                show = showDetailsDialog,
+                remark = remarkInput,
+                onRemarkChange = { remarkInput = it },
+                location = locationInput,
+                onLocationChange = { locationInput = it },
+                watchedMovie = watchedMovie,
+                onWatchedMovieChange = { watchedMovie = it },
+                climax = climax,
+                onClimaxChange = { climax = it },
+                props = props,
+                onPropsChange = { props = it },
+                rating = rating,
+                onRatingChange = { rating = it },
+                mood = mood,
+                onMoodChange = { mood = it },
+                onConfirm = {
+                    val now = LocalDateTime.now()
+                    val session = Session(
+                        timestamp = now,
+                        duration = elapsedSeconds,
+                        remark = remarkInput,
+                        location = locationInput,
+                        watchedMovie = watchedMovie,
+                        climax = climax,
+                        rating = rating,
+                        mood = mood,
+                        props = props
+                    )
+                    sessions.add(session)
+                    scope.launch { SessionRepository.saveSessions(context, sessions) }
 
-                            Text("起飞地点（可选）")
-                            TextField(
-                                value = locationInput,
-                                onValueChange = { locationInput = it },
-                                placeholder = { Text("例如：卧室") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(Modifier.height(12.dp))
+                    // 重置状态
+                    isRunning = false
+                    remarkInput = ""
+                    locationInput = ""
+                    watchedMovie = false
+                    climax = false
+                    rating = 3f
+                    mood = "平静"
+                    props = "手"
+                    showDetailsDialog = false
 
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = watchedMovie,
-                                    onCheckedChange = { watchedMovie = it })
-                                Spacer(Modifier.width(4.dp))
-                                Text("观看小电影")
-                                Spacer(
-                                    Modifier
-                                        .width(16.dp)
-                                )
-                                Checkbox(
-                                    checked = climax,
-                                    onCheckedChange = {
-                                        climax = it
-                                    }
-                                )
-                                Spacer(
-                                    Modifier
-                                        .width(4.dp)
-                                )
-                                Text("是否高潮")
-                            }
-                            Spacer(Modifier.height(12.dp))
-
-                            Text("道具：")
-                            val prop = listOf("Hand Job", "飞机杯", "充气娃娃")
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                prop.forEach { p ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.widthIn(max = 150.dp) // 控制每项最大宽度
-                                    ) {
-                                        RadioButton(
-                                            selected = (props == p),
-                                            onClick = { props = p }
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(p)
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(12.dp))
-
-                            Text("评分：${"%.1f".format(rating)}") // 显示1位小数
-                            Slider(
-                                value = rating,
-                                onValueChange = { rating = it },
-                                valueRange = 0f..5f,
-                                steps = 25,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            // 显示最小/最大值
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("0")
-                                Text("5.0")
-                            }
-                            Spacer(Modifier.height(12.dp))
-
-                            Text("心情：")
-                            val moods = listOf("平静", "愉悦", "兴奋", "疲惫", "这是最后一次！")
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                moods.forEach { m ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.widthIn(max = 150.dp) // 控制每项最大宽度
-                                    ) {
-                                        RadioButton(
-                                            selected = (mood == m),
-                                            onClick = { mood = m }
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(m)
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            // 构造 Session 对象
-                            val now = LocalDateTime.now()
-                            val session = Session(
-                                timestamp = now,
-                                duration = elapsedSeconds,
-                                remark = remarkInput,
-                                location = locationInput,
-                                watchedMovie = watchedMovie,
-                                climax = climax,
-                                rating = rating.toFloat(),
-                                mood = mood,
-                                props = props
-                            )
-                            // 更新本地列表
-                            sessions.add(session)
-
-                            // 异步持久化
-                            scope.launch {
-                                SessionRepository.saveSessions(context, sessions)
-                            }
-
-                            // 重置 UI 状态
-                            isRunning = false
-                            remarkInput = ""
-                            locationInput = ""
-                            watchedMovie = false
-                            climax = false
-                            rating = 3f
-                            mood = "平静"
-                            props = "Hand Job"
-                            showDetailsDialog = false
-
-                            // 停止服务
-                            context.startService(
-                                serviceIntent.apply { action = TimerService.ACTION_STOP }
-                            )
-                        }) { Text("确认") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDetailsDialog = false }) { Text("取消") }
-                    }
-                )
-            }
+                    // 停止服务
+                    context.startService(
+                        serviceIntent.apply { action = TimerService.ACTION_STOP }
+                    )
+                },
+                onDismiss = { showDetailsDialog = false }
+            )
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DetailsDialog(
+    show: Boolean,
+    remark: String,
+    onRemarkChange: (String) -> Unit,
+    location: String,
+    onLocationChange: (String) -> Unit,
+    watchedMovie: Boolean,
+    onWatchedMovieChange: (Boolean) -> Unit,
+    climax: Boolean,
+    onClimaxChange: (Boolean) -> Unit,
+    props: String,
+    onPropsChange: (String) -> Unit,
+    rating: Float,
+    onRatingChange: (Float) -> Unit,
+    mood: String,
+    onMoodChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (!show) return
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("填写本次信息") },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                // 备注
+                Text("备注（可选）")
+                Spacer(Modifier.height(2.dp))
+                OutlinedTextField(
+                    value = remark,
+                    onValueChange = onRemarkChange,
+                    placeholder = { Text("有什么想说的？") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // 起飞地点
+                Text("起飞地点（可选）")
+                Spacer(Modifier.height(2.dp))
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = onLocationChange,
+                    placeholder = { Text("例如：卧室") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // 选项：观看小电影 / 是否高潮
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = watchedMovie, onCheckedChange = onWatchedMovieChange)
+                    Spacer(Modifier.width(4.dp))
+                    Text("观看小电影")
+                    Spacer(Modifier.width(16.dp))
+                    Checkbox(checked = climax, onCheckedChange = onClimaxChange)
+                    Spacer(Modifier.width(4.dp))
+                    Text("是否高潮")
+                }
+                Spacer(Modifier.height(12.dp))
+
+                // 道具
+                Text("道具：")
+                val propList = listOf("手", "飞机杯", "充气娃娃")
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    propList.forEach { p ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.widthIn(max = 150.dp)
+                        ) {
+                            RadioButton(
+                                selected = (props == p),
+                                onClick = { onPropsChange(p) }
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(p)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                // 评分
+                Text("评分：${"%.1f".format(rating)}")
+                Slider(
+                    value = rating,
+                    onValueChange = onRatingChange,
+                    valueRange = 0f..5f,
+                    steps = 25,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("0")
+                    Text("5.0")
+                }
+                Spacer(Modifier.height(12.dp))
+
+                // 心情
+                Text("心情：")
+                val moods = listOf("平静", "愉悦", "兴奋", "疲惫", "这是最后一次！")
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    moods.forEach { m ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.widthIn(max = 150.dp)
+                        ) {
+                            RadioButton(
+                                selected = (mood == m),
+                                onClick = { onMoodChange(m) }
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(m)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("确认")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @SuppressLint("DefaultLocale")
