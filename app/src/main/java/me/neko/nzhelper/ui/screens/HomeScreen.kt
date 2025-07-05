@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -394,7 +396,12 @@ fun DetailsDialog(
         onDismissRequest = onDismiss,
         title = { Text("填写本次信息") },
         text = {
-            Column(Modifier.fillMaxWidth()) {
+            val scrollState = rememberScrollState()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+            ) {
                 // 备注
                 Text("备注（可选）")
                 Spacer(Modifier.height(2.dp))
@@ -402,7 +409,6 @@ fun DetailsDialog(
                     value = remark,
                     onValueChange = onRemarkChange,
                     placeholder = { Text("有什么想说的？") },
-                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
@@ -414,7 +420,6 @@ fun DetailsDialog(
                     value = location,
                     onValueChange = onLocationChange,
                     placeholder = { Text("例如：卧室") },
-                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(12.dp))
