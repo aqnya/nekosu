@@ -428,7 +428,7 @@ fun DetailsDialog(
                 )
                 Spacer(Modifier.height(12.dp))
 
-                // 选项：是否观看小电影 / 是否高潮
+                // 选项：是否观看小电影 / 是否发射（高潮）
                 Column {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -451,7 +451,7 @@ fun DetailsDialog(
                     ) {
                         Checkbox(checked = climax, onCheckedChange = null)
                         Spacer(Modifier.width(4.dp))
-                        Text("是否高潮")
+                        Text("是否发射")
                     }
                 }
 
@@ -463,7 +463,7 @@ fun DetailsDialog(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
 
-                val propList = listOf("手", "飞机杯", "充气娃娃")
+                val propList = listOf("手", "斐济杯", "小胶妻")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -350,7 +350,7 @@ fun HistoryScreen() {
                             Text("备注：${s.remark.ifEmpty { "无" }}")
                             Text("地点：${s.location.ifEmpty { "无" }}")
                             Text("是否观看小电影：${if (s.watchedMovie) "是" else "否"}")
-                            Text("高潮：${if (s.climax) "是" else "否"}")
+                            Text("发射：${if (s.climax) "是" else "否"}")
                             Text("道具：${s.props.ifEmpty { "无" }}")
                             Text("评分：${"%.1f".format(s.rating)} / 5.0")
                             Text("心情：${s.mood.ifEmpty { "无" }}")
