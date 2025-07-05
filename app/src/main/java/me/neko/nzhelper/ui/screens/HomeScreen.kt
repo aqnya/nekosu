@@ -8,6 +8,8 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.widget.CalendarView
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,11 +27,11 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -61,6 +64,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -424,20 +428,41 @@ fun DetailsDialog(
                 )
                 Spacer(Modifier.height(12.dp))
 
-                // 选项：观看小电影 / 是否高潮
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = watchedMovie, onCheckedChange = onWatchedMovieChange)
-                    Spacer(Modifier.width(4.dp))
-                    Text("观看小电影")
-                    Spacer(Modifier.width(16.dp))
-                    Checkbox(checked = climax, onCheckedChange = onClimaxChange)
-                    Spacer(Modifier.width(4.dp))
-                    Text("是否高潮")
+                // 选项：是否观看小电影 / 是否高潮
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onWatchedMovieChange(!watchedMovie) }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Checkbox(checked = watchedMovie, onCheckedChange = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("是否观看小电影")
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onClimaxChange(!climax) }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        Checkbox(checked = climax, onCheckedChange = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("是否高潮")
+                    }
                 }
+
                 Spacer(Modifier.height(12.dp))
 
                 // 道具
-                Text("道具：")
+                Text(
+                    text = "道具：",
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
                 val propList = listOf("手", "飞机杯", "充气娃娃")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -445,16 +470,35 @@ fun DetailsDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     propList.forEach { p ->
+                        val isSelected = props == p
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.widthIn(max = 150.dp)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
+                                )
+                                .clickable { onPropsChange(p) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             RadioButton(
-                                selected = (props == p),
-                                onClick = { onPropsChange(p) }
+                                selected = isSelected,
+                                onClick = null, // 交由 Row 处理点击
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text(p)
+                            Text(
+                                text = p,
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
@@ -479,7 +523,11 @@ fun DetailsDialog(
                 Spacer(Modifier.height(12.dp))
 
                 // 心情
-                Text("心情：")
+                Text(
+                    text = "心情：",
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
                 val moods = listOf("平静", "愉悦", "兴奋", "疲惫", "这是最后一次！")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -487,16 +535,35 @@ fun DetailsDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     moods.forEach { m ->
+                        val isSelected = mood == m
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.widthIn(max = 150.dp)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
+                                )
+                                .clickable { onMoodChange(m) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             RadioButton(
-                                selected = (mood == m),
-                                onClick = { onMoodChange(m) }
+                                selected = isSelected,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text(m)
+                            Text(
+                                text = m,
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 }
