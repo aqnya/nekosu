@@ -40,9 +40,11 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import com.google.gson.Gson
 import com.google.gson.JsonParser
+import kotlinx.coroutines.launch
 import me.neko.nzhelper.data.Session
 import me.neko.nzhelper.data.SessionRepository
 import java.io.OutputStreamWriter
@@ -78,6 +81,19 @@ fun HistoryScreen() {
     val gson = remember { Gson() }
     val formatter = remember { DateTimeFormatter.ISO_LOCAL_DATE_TIME }
     val sessions = remember { mutableStateListOf<Session>() }
+
+    val scope = rememberCoroutineScope()
+    var editSession by remember { mutableStateOf<Session?>(null) }
+    var showDetailsDialog by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
+
+    var remarkInput by remember { mutableStateOf("") }
+    var locationInput by remember { mutableStateOf("") }
+    var watchedMovie by remember { mutableStateOf(false) }
+    var climax by remember { mutableStateOf(false) }
+    var rating by remember { mutableFloatStateOf(3f) }
+    var mood by remember { mutableStateOf("平静") }
+    var props by remember { mutableStateOf("手") }
 
     var showMenu by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -322,41 +338,88 @@ fun HistoryScreen() {
             }
 
             // 查看详情对话框
-            if (sessionToView != null) {
+            sessionToView?.let { s ->
                 AlertDialog(
                     onDismissRequest = { sessionToView = null },
                     title = { Text("会话详情") },
                     text = {
                         Column {
-                            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                            Text("开始时间：${sessionToView!!.timestamp.format(pattern)}")
-                            Text("持续时长：${formatTime(sessionToView!!.duration)}")
-                            if (sessionToView!!.remark.isNotEmpty()) {
-                                Text("备注：${sessionToView!!.remark}")
-                            } else {
-                                Text("备注：无")
-                            }
-                            if (sessionToView!!.location.isNotEmpty()) {
-                                Text("地点：${sessionToView!!.location}")
-                            } else {
-                                Text("地点：无")
-                            }
-                            Text("观看小电影：${if (sessionToView!!.watchedMovie) "是" else "否"}")
-                            Text("高潮：${if (sessionToView!!.climax) "是" else "否"}")
-                            if (sessionToView!!.props.isNotEmpty())
-                                Text("道具：${sessionToView!!.props}")
-                            Text("评分：${"%.1f".format(sessionToView!!.rating)} / 5.0")
-                            if (sessionToView!!.mood.isNotEmpty())
-                                Text("心情：${sessionToView!!.mood}")
+                            val pat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                            Text("开始时间：${s.timestamp.format(pat)}")
+                            Text("持续时长：${formatTime(s.duration)}")
+                            Text("备注：${s.remark.ifEmpty { "无" }}")
+                            Text("地点：${s.location.ifEmpty { "无" }}")
+                            Text("观看小电影：${if (s.watchedMovie) "是" else "否"}")
+                            Text("高潮：${if (s.climax) "是" else "否"}")
+                            Text("道具：${s.props.ifEmpty { "无" }}")
+                            Text("评分：${"%.1f".format(s.rating)} / 5.0")
+                            Text("心情：${s.mood.ifEmpty { "无" }}")
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { sessionToView = null }) {
-                            Text("关闭")
-                        }
+                        TextButton(onClick = { sessionToView = null }) { Text("关闭") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            // 进入编辑状态
+                            editSession = s
+                            isEditing = true
+                            remarkInput = s.remark
+                            locationInput = s.location
+                            watchedMovie = s.watchedMovie
+                            climax = s.climax
+                            rating = s.rating
+                            mood = s.mood
+                            props = s.props
+                            showDetailsDialog = true
+                            sessionToView = null
+                        }) { Text("编辑") }
                     }
                 )
             }
+            // 编辑对话框复用 DetailsDialog
+            DetailsDialog(
+                show = showDetailsDialog,
+                remark = remarkInput,
+                onRemarkChange = { remarkInput = it },
+                location = locationInput,
+                onLocationChange = { locationInput = it },
+                watchedMovie = watchedMovie,
+                onWatchedMovieChange = { watchedMovie = it },
+                climax = climax,
+                onClimaxChange = { climax = it },
+                props = props,
+                onPropsChange = { props = it },
+                rating = rating,
+                onRatingChange = { rating = it },
+                mood = mood,
+                onMoodChange = { mood = it },
+                onConfirm = {
+                    if (isEditing && editSession != null) {
+                        // 更新列表中对应项
+                        val idx = sessions.indexOf(editSession!!)
+                        if (idx >= 0) {
+                            sessions[idx] = editSession!!.copy(
+                                remark = remarkInput,
+                                location = locationInput,
+                                watchedMovie = watchedMovie,
+                                climax = climax,
+                                rating = rating,
+                                mood = mood,
+                                props = props
+                            )
+                        }
+                    }
+                    // 保存并重置
+                    scope.launch { SessionRepository.saveSessions(context, sessions) }
+                    remarkInput = ""; locationInput = ""; watchedMovie = false
+                    climax = false; rating = 3f; mood = "平静"; props = "手"
+                    showDetailsDialog = false; isEditing = false; editSession = null
+                },
+                onDismiss = {
+                    showDetailsDialog = false; isEditing = false; editSession = null
+                }
+            )
         }
     }
 }
