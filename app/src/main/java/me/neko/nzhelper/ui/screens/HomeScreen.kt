@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
-import android.widget.CalendarView
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,16 +68,14 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
 import me.neko.nzhelper.data.Session
 import me.neko.nzhelper.data.SessionRepository
 import me.neko.nzhelper.ui.service.TimerService
-import java.time.LocalDate
+import me.neko.nzhelper.ui.util.CalendarHeatMapStyled
+import me.neko.nzhelper.ui.util.buildDayStats
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -133,7 +130,6 @@ fun HomeScreen() {
     var rating by remember { mutableFloatStateOf(3f) }
     var mood by remember { mutableStateOf("平静") }
     var props by remember { mutableStateOf("手") }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     val sessions = remember { mutableStateListOf<Session>() }
 
@@ -234,7 +230,6 @@ fun HomeScreen() {
                 items(stats) { info ->
                     OutlinedCard(
                         onClick = {
-                            selectedDate = null
                             showCalendar = true
                         },
                         modifier = Modifier.fillMaxWidth(0.8f),
@@ -248,47 +243,19 @@ fun HomeScreen() {
                 }
             }
 
-            // 日历查看对话框
+            // 日历热力图
             if (showCalendar) {
+                val dayStats = remember { buildDayStats(sessions) }
                 AlertDialog(
                     onDismissRequest = { showCalendar = false },
-                    title = { Text(text = "查看历史记录") },
+                    title = { Text(text = "发射日历") },
                     text = {
-                        Column {
-                            AndroidView(
-                                factory = { ctx ->
-                                    CalendarView(ctx).apply {
-                                        setOnDateChangeListener { _, year, month, dayOfMonth ->
-                                            selectedDate = LocalDate.of(year, month + 1, dayOfMonth)
-                                        }
-                                        date = Calendar.getInstance().timeInMillis
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            selectedDate?.let { date ->
-                                val daySessions =
-                                    sessions.filter { it.timestamp.toLocalDate() == date }
-                                if (daySessions.isEmpty()) {
-                                    Text(
-                                        text = "$date 无记录",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                } else {
-                                    daySessions.forEach { s ->
-                                        Text(
-                                            text = "${
-                                                s.timestamp.toLocalTime()
-                                                    .format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-                                            } - ${formatTime(s.duration)}${if (s.remark.isNotEmpty()) " 备注: ${s.remark}" else ""}",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                }
-                            }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            CalendarHeatMapStyled(dayStats)
                         }
                     },
                     confirmButton = {
