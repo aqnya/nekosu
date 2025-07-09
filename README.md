@@ -4,6 +4,7 @@
 
 # NzHelper
 
+[![license](https://img.shields.io/github/license/bug-bit/NzHelper.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
 [![Stars](https://img.shields.io/github/stars/bug-bit/NzHelper?label=stars)](https://github.com/bug-bit/NzHelper)
 <a href="https://github.com/bug-bit/NzHelper/releases"><img alt="GitHub all releases" src="https://img.shields.io/github/downloads/bug-bit/NzHelper/total?label=Downloads"></a>
 [![GitHub Release](https://img.shields.io/github/v/release/bug-bit/NzHelper)](https://github.com/bug-bit/NzHelper/releases)
