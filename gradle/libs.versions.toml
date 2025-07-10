@@ -1,18 +1,18 @@
 [versions]
-agp = "8.10.0"
+agp = "8.11.0"
 gson = "2.13.1"
-kotlin = "2.1.20"
-coreKtx = "1.13.1"
+kotlin = "2.2.0"
+coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 lifecycleRuntimeKtx = "2.9.0"
-activityCompose = "1.8.2"
+activityCompose = "1.9.0"
 composeBom = "2024.09.00"
 moshi = "1.15.2"
 moshiKotlin = "1.15.2"
 navigationCompose = "2.9.0"
-okhttp = "4.12.0"
+okhttp = "5.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
