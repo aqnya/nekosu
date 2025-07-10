@@ -32,7 +32,7 @@ object UpdateChecker {
 
                 if (!resp.isSuccessful) return@withContext null
 
-                val body = resp.body?.string().orEmpty().also {
+                val body = resp.body.string().also {
                     Log.d("UpdateCheck", "GitHub raw JSON: $it")
                 }
 
