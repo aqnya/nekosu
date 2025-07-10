@@ -9,8 +9,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 data class GitHubRelease(
-    @Json(name = "tag_name") val tagName: String,
-    @Json(name = "name") val releaseName: String
+    @param:Json(name = "tag_name") val tagName: String,
+    @param:Json(name = "name") val releaseName: String
 )
 
 object UpdateChecker {
