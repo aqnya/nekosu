@@ -137,6 +137,8 @@ fun MainScreen() {
             composable(BottomNavItem.History.route) { HistoryScreen() }
             composable(BottomNavItem.Settings.route) { SettingsScreen(navController) }
             composable("about") { AboutScreen(navController) }
+            composable("logcat") {
+ LogcatScreen(navController)   }
             composable("open_source") { OpenSourceScreen(navController) }
         }
 
