@@ -52,3 +52,11 @@ LaunchedEffect(Unit) {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun LogcatScreenPreview() {
+    LogcatScreen(
+        navController = rememberNavController()
+    )
+}
