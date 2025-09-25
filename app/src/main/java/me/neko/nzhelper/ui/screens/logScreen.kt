@@ -15,27 +15,19 @@ import java.io.InputStreamReader
 @Composable
 fun LogcatScreen() {
     var logs by remember { mutableStateOf(listOf<String>()) }
-    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        scope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val process = Runtime.getRuntime().exec("logcat -d")
-                    val reader = BufferedReader(InputStreamReader(process.inputStream))
-                    val output = mutableListOf<String>()
-                    var line: String? = reader.readLine()
-                    while (line != null) {
-                        output.add(line)
-                        line = reader.readLine()
-                    }
-                    logs = output.reversed() // 最新日志在最上面
-                } catch (e: Exception) {
-                    logs = listOf("无法读取日志: ${e.message}")
-                }
-            }
+LaunchedEffect(Unit) {
+    withContext(Dispatchers.IO) {
+        try {
+            val process = Runtime.getRuntime().exec("logcat -d")
+            val reader = process.inputStream.bufferedReader()
+            val output = reader.readLines().reversed()
+            logs = output
+        } catch (e: Exception) {
+            logs = listOf("无法读取日志: ${e.message}")
         }
     }
+}
 
     Scaffold(
         topBar = {
