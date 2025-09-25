@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogcatScreen() {
     var logs by remember { mutableStateOf(listOf<String>()) }
