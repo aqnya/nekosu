@@ -18,15 +18,14 @@ fun LogcatScreen() {
     var logs by remember { mutableStateOf(listOf<String>()) }
 
 LaunchedEffect(Unit) {
-    withContext(Dispatchers.IO) {
-        try {
+    try {
+        val output = withContext(Dispatchers.IO) {
             val process = Runtime.getRuntime().exec("logcat -d")
-            val reader = process.inputStream.bufferedReader()
-            val output = reader.readLines().reversed()
-            logs = output
-        } catch (e: Exception) {
-            logs = listOf("无法读取日志: ${e.message}")
+            process.inputStream.bufferedReader().use { it.readLines().reversed() }
         }
+        logs = output
+    } catch (e: Exception) {
+        logs = listOf("无法读取日志: ${e.message}")
     }
 }
 
