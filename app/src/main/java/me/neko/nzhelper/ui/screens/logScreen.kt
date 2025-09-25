@@ -17,20 +17,29 @@ import androidx.navigation.compose.rememberNavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun LogcatScreen() {
     var logs by remember { mutableStateOf(listOf<String>()) }
+    val listState = rememberLazyListState()
 
-LaunchedEffect(Unit) {
-    try {
-        val output = withContext(Dispatchers.IO) {
-            val process = Runtime.getRuntime().exec("logcat -d")
-            process.inputStream.bufferedReader().use { it.readLines().reversed() }
+    LaunchedEffect(Unit) {
+        try {
+            val output = withContext(Dispatchers.IO) {
+                val process = Runtime.getRuntime().exec("logcat -d")
+                process.inputStream.bufferedReader().use { it.readLines().reversed() }
+            }
+            logs = output
+        } catch (e: Exception) {
+            logs = listOf("无法读取日志: ${e.message}")
         }
-        logs = output
-    } catch (e: Exception) {
-        logs = listOf("无法读取日志: ${e.message}")
     }
-}
+
+    LaunchedEffect(logs) {
+        if (logs.isNotEmpty()) {
+            listState.scrollToItem(logs.lastIndex)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -40,6 +49,7 @@ LaunchedEffect(Unit) {
         }
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
