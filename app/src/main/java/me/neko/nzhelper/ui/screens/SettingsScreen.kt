@@ -66,6 +66,23 @@ fun SettingsScreen(
                     Text(text = "关于", style = MaterialTheme.typography.titleMedium)
                 }
             )
+            ListItem(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        navController.navigate("logcat")
+                    },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Outlined.BugReport,
+                        contentDescription = null,
+                    )
+                },
+                headlineContent = {
+                    Text(text = "查看 Logcat", style = MaterialTheme.typography.titleMedium)
+                }
+            )
+            
             Spacer(modifier = Modifier.weight(1f))
         }
 
