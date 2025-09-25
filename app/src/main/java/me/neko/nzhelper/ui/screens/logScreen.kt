@@ -14,9 +14,8 @@ import java.io.InputStreamReader
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.lazy.rememberLazyListState
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogcatScreen() {
