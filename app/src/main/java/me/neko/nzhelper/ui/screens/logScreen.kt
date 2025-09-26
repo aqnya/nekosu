@@ -178,26 +178,24 @@ fun LogcatScreen(navController: NavHostController) {
 
 @Composable
 fun LogItem(line: String) {
+    val defaultColor = MaterialTheme.colorScheme.onBackground
     val color = when {
-        line.contains(" E ", ignoreCase = true) -> Color.Red
-        line.contains(" W ", ignoreCase = true) -> Color.Yellow
-        line.contains(" I ", ignoreCase = true) -> Color.Green
-        line.contains(" D ", ignoreCase = true) -> Color.Blue
-        else -> Color.Black
+        line.contains(" E ", ignoreCase = true) -> MaterialTheme.colorScheme.error
+        line.contains(" W ", ignoreCase = true) -> Color(0xFFFFC107) // amber 警告色
+        line.contains(" I ", ignoreCase = true) -> Color(0xFF4CAF50) // info 绿色
+        line.contains(" D ", ignoreCase = true) -> Color(0xFF2196F3) // debug 蓝色
+        else -> defaultColor
     }
-
-    val hScroll = rememberScrollState()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-         
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
             text = line,
             style = MaterialTheme.typography.bodySmall.copy(color = color),
-            softWrap = false // 保持单行，不换行
+            softWrap = false
         )
     }
 }
