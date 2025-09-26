@@ -31,52 +31,69 @@ import java.util.*
 @Composable
 fun LogcatScreen(navController: NavHostController) {
     var logs by remember { mutableStateOf(listOf<String>()) }
+    var isRecording by remember { mutableStateOf(true) } // 添加控制状态
     val listState = rememberLazyListState()
     val context = LocalContext.current
-
-    // 记住 logcat 进程
     var process: Process? by remember { mutableStateOf(null) }
 
-    LaunchedEffect(Unit) {
+    // 改进的日志收集逻辑
+    LaunchedEffect(isRecording) {
+        if (!isRecording) {
+            process?.destroy()
+            return@LaunchedEffect
+        }
+
         try {
             process = withContext(Dispatchers.IO) {
-                Runtime.getRuntime().exec("logcat")
+                // 清除旧日志并开始新的收集
+                Runtime.getRuntime().exec("logcat -c")
+                Runtime.getRuntime().exec("logcat -v time")
             }
 
             val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             withContext(Dispatchers.IO) {
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    line?.let {
+                try {
+                    reader.lineSequence()
+                        .takeWhile { isRecording }
+                        .forEach { line ->
+                            if (line.isNotBlank()) {
+                                withContext(Dispatchers.Main) {
+                                    // 限制日志数量，防止内存溢出
+                                    logs = (logs + line).takeLast(1000)
+                                }
+                            }
+                        }
+                } catch (e: Exception) {
+                    if (isRecording) {
                         withContext(Dispatchers.Main) {
-                            logs = (logs + it).takeLast(500)
+                            logs = logs + "日志读取错误: ${e.message}"
                         }
                     }
                 }
             }
         } catch (e: Exception) {
-            logs = listOf("无法读取日志: ${e.message}")
+            logs = listOf("无法启动 logcat: ${e.message}")
         }
     }
 
-    // 离开界面时销毁 logcat 进程
+    // 自动滚动优化
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty() && isRecording) {
+            listState.animateScrollToItem(logs.size - 1)
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
+            isRecording = false
             process?.destroy()
-            process = null
         }
     }
-
-    LaunchedEffect(logs) {
-    if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.lastIndex)
-    }
-}
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Logcat") },
+                title = { Text("Logcat 日志查看器") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -86,55 +103,137 @@ fun LogcatScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                IconButton(onClick = { exportLogsToDownloads(context, logs) }) {
-    Icon(
-        imageVector = Icons.Default.Save,
-        contentDescription = "导出日志"
-    )
-}
+                    // 添加暂停/继续按钮
+                    IconButton(onClick = { 
+                        isRecording = !isRecording 
+                    }) {
+                        Icon(
+                            imageVector = if (isRecording) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isRecording) "暂停" else "继续"
+                        )
+                    }
+                    
+                    // 添加清除日志按钮
+                    IconButton(onClick = { 
+                        logs = emptyList()
+                        try {
+                            Runtime.getRuntime().exec("logcat -c")
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "清除失败: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "清除日志"
+                        )
+                    }
+                    
+                    IconButton(onClick = { 
+                        if (logs.isNotEmpty()) {
+                            exportLogsToDownloads(context, logs) 
+                        } else {
+                            Toast.makeText(context, "没有日志可导出", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = "导出日志"
+                        )
+                    }
                 }
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(logs) { line ->
-                Text(
-                    text = line,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
+        if (logs.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("暂无日志", style = MaterialTheme.typography.bodyMedium)
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                items(logs, key = { it.hashCode() }) { line ->
+                    LogItem(line = line)
+                }
             }
         }
     }
 }
 
+// 独立的日志项组件，便于优化渲染
+@Composable
+fun LogItem(line: String) {
+    // 根据日志级别添加颜色
+    val color = when {
+        line.contains(" E ", ignoreCase = true) -> Color.Red
+        line.contains(" W ", ignoreCase = true) -> Color.Yellow
+        line.contains(" I ", ignoreCase = true) -> Color.Green
+        line.contains(" D ", ignoreCase = true) -> Color.Blue
+        else -> Color.Gray
+    }
+    
+    Text(
+        text = line,
+        style = MaterialTheme.typography.bodySmall.copy(color = color),
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .fillMaxWidth(),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+// 改进的导出函数
 private fun exportLogsToDownloads(context: Context, logs: List<String>) {
     if (logs.isEmpty()) return
 
-    val sdf = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-    val filename = "logcat_${sdf.format(Date())}.txt"
-
-    val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-    if (!downloadsDir.exists()) {
-        downloadsDir.mkdirs()
-    }
-
-    val file = File(downloadsDir, filename)
     try {
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+        val filename = "logcat_${sdf.format(Date())}.txt"
+
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) {
+            downloadsDir.mkdirs()
+        }
+
+        val file = File(downloadsDir, filename)
         FileOutputStream(file).use { fos ->
-            logs.forEach { line ->
-                fos.write((line + "\n").toByteArray())
+            logs.forEachIndexed { index, line ->
+                fos.write("${index + 1}. $line\n".toByteArray())
             }
         }
-        Toast.makeText(context, "日志已导出到下载目录: $filename", Toast.LENGTH_SHORT).show()
+        
+        Toast.makeText(
+            context, 
+            "日志已导出到: ${file.absolutePath}", 
+            Toast.LENGTH_LONG
+        ).show()
+        
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "导出日志失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "导出失败: ${e.message}", Toast.LENGTH_SHORT).show()
     }
+}
+
+// 添加权限检查函数（需要在调用前检查权限）
+private fun hasWritePermission(context: Context): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context, 
+        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+@Preview
+@Composable
+fun PreviewLogcatScreen() {
+    LogcatScreen(navController = rememberNavController())
 }
