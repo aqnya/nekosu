@@ -28,6 +28,8 @@ import android.content.pm.PackageManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 import android.content.Context
 import android.os.Environment
@@ -36,7 +38,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,10 +181,8 @@ fun LogcatScreen(navController: NavHostController) {
     }
 }
 
-// 独立的日志项组件，便于优化渲染
 @Composable
 fun LogItem(line: String) {
-    // 根据日志级别添加颜色
     val color = when {
         line.contains(" E ", ignoreCase = true) -> Color.Red
         line.contains(" W ", ignoreCase = true) -> Color.Yellow
@@ -191,16 +190,21 @@ fun LogItem(line: String) {
         line.contains(" D ", ignoreCase = true) -> Color.Blue
         else -> Color.Black
     }
-    
-    Text(
-        text = line,
-        style = MaterialTheme.typography.bodySmall.copy(color = color),
+
+    val hScroll = rememberScrollState()
+
+    Box(
         modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(hScroll)
             .padding(horizontal = 8.dp, vertical = 2.dp)
-            .fillMaxWidth(),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
+    ) {
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodySmall.copy(color = color),
+            softWrap = false // 保持单行，不换行
+        )
+    }
 }
 
 // 改进的导出函数
