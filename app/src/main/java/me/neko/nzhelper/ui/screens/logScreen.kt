@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import android.content.pm.PackageManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.lazy.itemsIndexed
 
 import android.content.Context
 import android.os.Environment
