@@ -43,42 +43,28 @@ import java.util.*
 @Composable
 fun LogcatScreen(navController: NavHostController) {
     var logs by remember { mutableStateOf(listOf<String>()) }
-    var isRecording by remember { mutableStateOf(true) } // 添加控制状态
+    var buffer = remember { mutableStateListOf<String>() } // 暂存区
+    var isRecording by remember { mutableStateOf(true) }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     var process: Process? by remember { mutableStateOf(null) }
 
-    // 改进的日志收集逻辑
-    LaunchedEffect(isRecording) {
-        if (!isRecording) {
-            process?.destroy()
-            return@LaunchedEffect
-        }
-
+    // 日志收集逻辑
+    LaunchedEffect(Unit) {
         try {
             process = withContext(Dispatchers.IO) {
-                // 清除旧日志并开始新的收集
-                Runtime.getRuntime().exec("logcat -c")
                 Runtime.getRuntime().exec("logcat -v time")
             }
-
             val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             withContext(Dispatchers.IO) {
-                try {
-                    reader.lineSequence()
-                        .takeWhile { isRecording }
-                        .forEach { line ->
-                            if (line.isNotBlank()) {
-                                withContext(Dispatchers.Main) {
-                                    // 限制日志数量，防止内存溢出
-                                    logs = (logs + line).takeLast(1000)
-                                }
-                            }
-                        }
-                } catch (e: Exception) {
-                    if (isRecording) {
+                reader.lineSequence().forEach { line ->
+                    if (line.isNotBlank()) {
                         withContext(Dispatchers.Main) {
-                            logs = logs + "日志读取错误: ${e.message}"
+                            if (isRecording) {
+                                logs = (logs + line).takeLast(1000)
+                            } else {
+                                buffer.add(line) // 暂停时只存 buffer
+                            }
                         }
                     }
                 }
@@ -88,7 +74,7 @@ fun LogcatScreen(navController: NavHostController) {
         }
     }
 
-    // 自动滚动优化
+    // 自动滚动到底部（仅录制状态下）
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty() && isRecording) {
             listState.animateScrollToItem(logs.size - 1)
@@ -97,7 +83,6 @@ fun LogcatScreen(navController: NavHostController) {
 
     DisposableEffect(Unit) {
         onDispose {
-            isRecording = false
             process?.destroy()
         }
     }
@@ -115,19 +100,27 @@ fun LogcatScreen(navController: NavHostController) {
                     }
                 },
                 actions = {
-                    // 添加暂停/继续按钮
-                    IconButton(onClick = { 
-                        isRecording = !isRecording 
+                    // 暂停 / 恢复
+                    IconButton(onClick = {
+                        if (isRecording) {
+                            isRecording = false
+                        } else {
+                            // 恢复时把 buffer 一次性刷回 UI
+                            logs = (logs + buffer).takeLast(1000)
+                            buffer.clear()
+                            isRecording = true
+                        }
                     }) {
                         Icon(
                             imageVector = if (isRecording) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isRecording) "暂停" else "继续"
                         )
                     }
-                    
-                    // 添加清除日志按钮
-                    IconButton(onClick = { 
+
+                    // 清除日志
+                    IconButton(onClick = {
                         logs = emptyList()
+                        buffer.clear()
                         try {
                             Runtime.getRuntime().exec("logcat -c")
                         } catch (e: Exception) {
@@ -139,10 +132,11 @@ fun LogcatScreen(navController: NavHostController) {
                             contentDescription = "清除日志"
                         )
                     }
-                    
-                    IconButton(onClick = { 
+
+                    // 导出日志
+                    IconButton(onClick = {
                         if (logs.isNotEmpty()) {
-                            exportLogsToDownloads(context, logs) 
+                            exportLogsToDownloads(context, logs)
                         } else {
                             Toast.makeText(context, "没有日志可导出", Toast.LENGTH_SHORT).show()
                         }
@@ -174,9 +168,9 @@ fun LogcatScreen(navController: NavHostController) {
                     .horizontalScroll(rememberScrollState()), // 整体横向滚动
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-            items(logs) { line ->
-    LogItem(line = line)
-}
+                items(logs) { line ->
+                    LogItem(line = line)
+                }
             }
         }
     }
