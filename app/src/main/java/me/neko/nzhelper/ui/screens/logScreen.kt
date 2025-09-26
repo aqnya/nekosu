@@ -59,10 +59,7 @@ fun LogcatScreen(navController: NavHostController) {
 
     LaunchedEffect(logs) {
     if (logs.isNotEmpty()) {
-        val isAtBottom = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index == logs.lastIndex - 1
-        if (isAtBottom) {
             listState.animateScrollToItem(logs.lastIndex)
-        }
     }
 }
 
