@@ -24,13 +24,23 @@ fun LogcatScreen(navController: NavHostController) {
     var logs by remember { mutableStateOf(listOf<String>()) }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(Unit) {
+        LaunchedEffect(Unit) {
         try {
-            val output = withContext(Dispatchers.IO) {
-                val process = Runtime.getRuntime().exec("logcat")
-                process.inputStream.bufferedReader().use { it.readLines().reversed() }
+            val process = withContext(Dispatchers.IO) {
+                Runtime.getRuntime().exec("logcat")
             }
-            logs = output
+
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            scope.launch(Dispatchers.IO) {
+                var line: String?
+                while (reader.readLine().also { line = it } != null) {
+                    line?.let {
+                        withContext(Dispatchers.Main) {
+                            logs = (logs + it).takeLast(500)
+                        }
+                    }
+                }
+            }
         } catch (e: Exception) {
             logs = listOf("无法读取日志: ${e.message}")
         }
