@@ -176,7 +176,7 @@ fun LogcatScreen(navController: NavHostController) {
             items = logs,
             key = { index, _ -> index }
         ) { index: Int, line: String ->
-            LogItem(line = line, index = index)
+            LogItem(line = line)
         }
             }
         }
