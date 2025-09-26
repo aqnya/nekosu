@@ -171,7 +171,7 @@ fun LogcatScreen(navController: NavHostController) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-        horizontalScroll(rememberScrollState()), // 整体横向滚动
+                    .horizontalScroll(rememberScrollState()), // 整体横向滚动
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
             items(logs) { line ->
