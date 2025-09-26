@@ -189,7 +189,7 @@ fun LogItem(line: String) {
         line.contains(" W ", ignoreCase = true) -> Color.Yellow
         line.contains(" I ", ignoreCase = true) -> Color.Green
         line.contains(" D ", ignoreCase = true) -> Color.Blue
-        else -> Color.Gray
+        else -> Color.Black
     }
     
     Text(
