@@ -170,7 +170,8 @@ fun LogcatScreen(navController: NavHostController) {
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(innerPadding)
+        horizontalScroll(rememberScrollState()), // 整体横向滚动
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
             items(logs) { line ->
@@ -196,7 +197,7 @@ fun LogItem(line: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(hScroll)
+         
             .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         Text(
