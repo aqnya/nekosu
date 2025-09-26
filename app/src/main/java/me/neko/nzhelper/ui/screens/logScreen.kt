@@ -22,6 +22,11 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import android.content.pm.PackageManager
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.core.content.ContextCompat
 
 import android.content.Context
 import android.os.Environment
