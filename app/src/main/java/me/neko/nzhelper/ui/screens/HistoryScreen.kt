@@ -36,7 +36,7 @@ fun HistoryScreen() {
         withContext(Dispatchers.IO) {
             val pm: PackageManager = context.packageManager
             val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { pm.getLaunchIntentForPackage(it.packageName) != null } // 只显示可启动的
+                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
                 .sortedBy { it.loadLabel(pm).toString().lowercase() }
                 .map { appInfo: ApplicationInfo ->
                     AppInfo(
@@ -70,44 +70,28 @@ fun HistoryScreen() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(8.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(apps) { app ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                // TODO: 点击后执行操作
-                            },
-                        shape = MaterialTheme.shapes.medium,
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    ListItem(
+                        headlineContent = {
+                            Text(app.name)
+                        },
+                        supportingContent = {
+                            Text(app.packageName)
+                        },
+                        leadingContent = {
                             Image(
                                 bitmap = app.icon,
                                 contentDescription = app.name,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(40.dp)
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    app.name,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    app.packageName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        },
+                        modifier = Modifier.clickable {
+                            // TODO: 点击后执行操作
                         }
-                    }
+                    )
+                    Divider() // 分隔线，让列表更规整
                 }
             }
         }
