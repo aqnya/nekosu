@@ -172,12 +172,9 @@ fun LogcatScreen(navController: NavHostController) {
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-            itemsIndexed(
-            items = logs,
-            key = { index, _ -> index }
-        ) { index: Int, line: String ->
-            LogItem(line = line)
-        }
+            items(logs) { line ->
+    LogItem(line = line)
+}
             }
         }
     }
