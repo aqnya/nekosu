@@ -31,7 +31,7 @@ fun LogcatScreen(navController: NavHostController) {
             }
 
             val reader = BufferedReader(InputStreamReader(process.inputStream))
-            scope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     line?.let {
