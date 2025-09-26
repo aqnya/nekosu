@@ -15,10 +15,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogcatScreen() {
+fun LogcatScreen(navController: NavHostController) {
     var logs by remember { mutableStateOf(listOf<String>()) }
     val listState = rememberLazyListState()
 
@@ -43,7 +44,7 @@ fun LogcatScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Logcat") }
+                title = { Text("Logcat") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
