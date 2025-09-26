@@ -3,6 +3,7 @@ package me.neko.nzhelper.ui.screens
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -63,22 +63,25 @@ fun HistoryScreen() {
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("正在加载应用列表...")
+                CircularProgressIndicator()
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(8.dp)
             ) {
                 items(apps) { app ->
-                    OutlinedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            // TODO: 点击后执行操作（比如跳转设置页）
-                        }
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                // TODO: 点击后执行操作
+                            },
+                        shape = MaterialTheme.shapes.medium,
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -89,12 +92,19 @@ fun HistoryScreen() {
                             Image(
                                 bitmap = app.icon,
                                 contentDescription = app.name,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(48.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Text(app.name, style = MaterialTheme.typography.bodyLarge)
-                                Text(app.packageName, style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    app.name,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
