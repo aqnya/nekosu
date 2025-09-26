@@ -25,7 +25,7 @@ fun LogcatScreen() {
     LaunchedEffect(Unit) {
         try {
             val output = withContext(Dispatchers.IO) {
-                val process = Runtime.getRuntime().exec("logcat -d")
+                val process = Runtime.getRuntime().exec("logcat")
                 process.inputStream.bufferedReader().use { it.readLines().reversed() }
             }
             logs = output
