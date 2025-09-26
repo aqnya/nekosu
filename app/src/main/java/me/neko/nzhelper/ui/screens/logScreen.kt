@@ -24,13 +24,16 @@ fun LogcatScreen(navController: NavHostController) {
     var logs by remember { mutableStateOf(listOf<String>()) }
     val listState = rememberLazyListState()
 
-        LaunchedEffect(Unit) {
+    // 记住 logcat 进程
+    var process: Process? by remember { mutableStateOf(null) }
+
+    LaunchedEffect(Unit) {
         try {
-            val process = withContext(Dispatchers.IO) {
+            process = withContext(Dispatchers.IO) {
                 Runtime.getRuntime().exec("logcat")
             }
 
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val reader = BufferedReader(InputStreamReader(process!!.inputStream))
             withContext(Dispatchers.IO) {
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
@@ -43,6 +46,14 @@ fun LogcatScreen(navController: NavHostController) {
             }
         } catch (e: Exception) {
             logs = listOf("无法读取日志: ${e.message}")
+        }
+    }
+
+    // 离开界面时销毁 logcat 进程
+    DisposableEffect(Unit) {
+        onDispose {
+            process?.destroy()
+            process = null
         }
     }
 
