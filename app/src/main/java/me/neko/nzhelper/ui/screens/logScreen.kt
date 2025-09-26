@@ -44,6 +44,14 @@ fun LogcatScreen() {
         topBar = {
             TopAppBar(
                 title = { Text("Logcat") }
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                },
             )
         }
     ) { innerPadding ->
