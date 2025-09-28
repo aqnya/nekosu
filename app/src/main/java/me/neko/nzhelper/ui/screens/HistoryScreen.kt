@@ -35,16 +35,15 @@ fun HistoryScreen() {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm: PackageManager = context.packageManager
-            val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-                .sortedBy { it.loadLabel(pm).toString().lowercase() }
-                .map { appInfo: ApplicationInfo ->
-                    AppInfo(
-                        name = appInfo.loadLabel(pm).toString(),
-                        packageName = appInfo.packageName,
-                        icon = appInfo.loadIcon(pm).toBitmap().asImageBitmap()
-                    )
-                }
+            val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+    .sortedBy { it.applicationInfo.loadLabel(pm).toString().lowercase() }
+    .map { pkgInfo ->
+        AppInfo(
+            name = pkgInfo.applicationInfo.loadLabel(pm).toString(),
+            packageName = pkgInfo.packageName,
+            icon = pkgInfo.applicationInfo.loadIcon(pm).toBitmap().asImageBitmap()
+        )
+    }
             apps = installed
         }
     }
