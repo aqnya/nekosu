@@ -32,21 +32,23 @@ fun HistoryScreen() {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val pm: PackageManager = context.packageManager
-            val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
-    .sortedBy { it.applicationInfo.loadLabel(pm).toString().lowercase() }
-    .map { pkgInfo ->
-        AppInfo(
-            name = pkgInfo.applicationInfo.loadLabel(pm).toString(),
-            packageName = pkgInfo.packageName,
-            icon = pkgInfo.applicationInfo.loadIcon(pm).toBitmap().asImageBitmap()
-        )
+LaunchedEffect(Unit) {
+    withContext(Dispatchers.IO) {
+        val pm: PackageManager = context.packageManager
+        val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+            .mapNotNull { pkgInfo ->
+                pkgInfo.applicationInfo?.let { appInfo ->
+                    AppInfo(
+                        name = appInfo.loadLabel(pm).toString(),
+                        packageName = pkgInfo.packageName,
+                        icon = appInfo.loadIcon(pm).toBitmap().asImageBitmap()
+                    )
+                }
+            }
+            .sortedBy { it.name.lowercase() } // 映射完成后再排序
+        apps = installed
     }
-            apps = installed
-        }
-    }
+}
 
     Scaffold(
         topBar = {
