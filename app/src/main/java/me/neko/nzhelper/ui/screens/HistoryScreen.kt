@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,35 +28,107 @@ data class AppInfo(
     val icon: ImageBitmap
 )
 
+enum class FilterMode(val label: String) {
+    ALL("全部应用"),
+    LAUNCHABLE("可启动应用"),
+    SYSTEM("系统应用"),
+    USER("用户应用")
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen() {
     val context = LocalContext.current
+    var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var filterMode by remember { mutableStateOf(FilterMode.ALL) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
-LaunchedEffect(Unit) {
-    withContext(Dispatchers.IO) {
+    // 加载所有应用（只在启动时）
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val pm: PackageManager = context.packageManager
+            val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
+                .mapNotNull { pkgInfo ->
+                    pkgInfo.applicationInfo?.let { appInfo ->
+                        AppInfo(
+                            name = appInfo.loadLabel(pm).toString(),
+                            packageName = pkgInfo.packageName,
+                            icon = appInfo.loadIcon(pm).toBitmap().asImageBitmap()
+                        )
+                    }
+                }
+                .sortedBy { it.name.lowercase() }
+            allApps = installed
+            apps = installed
+        }
+    }
+
+    // 根据过滤器 + 搜索条件动态更新
+    LaunchedEffect(filterMode, searchQuery, allApps) {
         val pm: PackageManager = context.packageManager
-        val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
-            .mapNotNull { pkgInfo ->
-                pkgInfo.applicationInfo?.let { appInfo ->
-                    AppInfo(
-                        name = appInfo.loadLabel(pm).toString(),
-                        packageName = pkgInfo.packageName,
-                        icon = appInfo.loadIcon(pm).toBitmap().asImageBitmap()
-                    )
+        apps = allApps.filter { app ->
+            // 先按过滤器筛选
+            val passFilter = when (filterMode) {
+                FilterMode.ALL -> true
+                FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
+                FilterMode.SYSTEM -> {
+                    val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                }
+                FilterMode.USER -> {
+                    val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
                 }
             }
-            .sortedBy { it.name.lowercase() } // 映射完成后再排序
-        apps = installed
+            // 再按搜索关键字过滤
+            val query = searchQuery.trim().lowercase()
+            val passSearch = query.isEmpty() ||
+                app.name.lowercase().contains(query) ||
+                app.packageName.lowercase().contains(query)
+
+            passFilter && passSearch
+        }
     }
-}
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("已安装应用") }
-            )
+            Column {
+                TopAppBar(
+                    title = { Text(filterMode.label) },
+                    actions = {
+                        Box {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(Icons.Default.FilterList, contentDescription = "过滤")
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false }
+                            ) {
+                                FilterMode.values().forEach { mode ->
+                                    DropdownMenuItem(
+                                        text = { Text(mode.label) },
+                                        onClick = {
+                                            filterMode = mode
+                                            menuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("搜索应用名或包名") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    singleLine = true
+                )
+            }
         }
     ) { innerPadding ->
         if (apps.isEmpty()) {
@@ -75,12 +149,8 @@ LaunchedEffect(Unit) {
             ) {
                 items(apps) { app ->
                     ListItem(
-                        headlineContent = {
-                            Text(app.name)
-                        },
-                        supportingContent = {
-                            Text(app.packageName)
-                        },
+                        headlineContent = { Text(app.name) },
+                        supportingContent = { Text(app.packageName) },
                         leadingContent = {
                             Image(
                                 bitmap = app.icon,
@@ -92,7 +162,7 @@ LaunchedEffect(Unit) {
                             // TODO: 点击后执行操作
                         }
                     )
-                    Divider() // 分隔线，让列表更规整
+                    Divider()
                 }
             }
         }
