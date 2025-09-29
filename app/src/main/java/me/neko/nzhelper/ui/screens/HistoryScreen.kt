@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,6 +46,7 @@ fun HistoryScreen() {
     var filterMode by remember { mutableStateOf(FilterMode.ALL) }
     var menuExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
 
     // 加载所有应用（只在启动时）
     LaunchedEffect(Unit) {
@@ -94,41 +97,57 @@ fun HistoryScreen() {
 
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text(filterMode.label) },
-                    actions = {
-                        Box {
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.FilterList, contentDescription = "过滤")
-                            }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                FilterMode.values().forEach { mode ->
-                                    DropdownMenuItem(
-                                        text = { Text(mode.label) },
-                                        onClick = {
-                                            filterMode = mode
-                                            menuExpanded = false
-                                        }
-                                    )
-                                }
+            TopAppBar(
+                title = {
+                    if (isSearching) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("搜索应用名或包名") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    } else {
+                        Text(filterMode.label)
+                    }
+                },
+                navigationIcon = {
+                    if (isSearching) {
+                        IconButton(onClick = {
+                            isSearching = false
+                            searchQuery = ""
+                        }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "关闭搜索")
+                        }
+                    }
+                },
+                actions = {
+                    if (!isSearching) {
+                        IconButton(onClick = { isSearching = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "搜索")
+                        }
+                    }
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "过滤")
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }
+                        ) {
+                            FilterMode.values().forEach { mode ->
+                                DropdownMenuItem(
+                                    text = { Text(mode.label) },
+                                    onClick = {
+                                        filterMode = mode
+                                        menuExpanded = false
+                                    }
+                                )
                             }
                         }
                     }
-                )
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("搜索应用名或包名") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    singleLine = true
-                )
-            }
+                }
+            )
         }
     ) { innerPadding ->
         if (apps.isEmpty()) {
