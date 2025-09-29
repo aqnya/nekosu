@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -64,35 +64,55 @@ fun HistoryScreen() {
                 }
                 .sortedBy { it.name.lowercase() }
             allApps = installed
-            apps = installed
+
+            // 初始时直接应用默认过滤器，避免闪烁
+            val initialApps = installed.filter { app ->
+                val passFilter = when (filterMode) {
+                    FilterMode.ALL -> true
+                    FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
+                    FilterMode.SYSTEM -> {
+                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    }
+                    FilterMode.USER -> {
+                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+                    }
+                }
+                // 初始搜索为空
+                true
+            }
+            apps = initialApps
             isLoading = false
         }
     }
 
-    // 根据过滤器 + 搜索条件动态更新
-    LaunchedEffect(filterMode, searchQuery, allApps) {
-        val pm: PackageManager = context.packageManager
-        apps = allApps.filter { app ->
-            // 先按过滤器筛选
-            val passFilter = when (filterMode) {
-                FilterMode.ALL -> true
-                FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
-                FilterMode.SYSTEM -> {
-                    val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+    // 根据过滤器 + 搜索条件动态更新（排除初始加载）
+    LaunchedEffect(filterMode, searchQuery) {
+        if (allApps.isNotEmpty()) {
+            val pm: PackageManager = context.packageManager
+            apps = allApps.filter { app ->
+                // 先按过滤器筛选
+                val passFilter = when (filterMode) {
+                    FilterMode.ALL -> true
+                    FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
+                    FilterMode.SYSTEM -> {
+                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    }
+                    FilterMode.USER -> {
+                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
+                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+                    }
                 }
-                FilterMode.USER -> {
-                    val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
-                }
-            }
-            // 再按搜索关键字过滤
-            val query = searchQuery.trim().lowercase()
-            val passSearch = query.isEmpty() ||
-                app.name.lowercase().contains(query) ||
-                app.packageName.lowercase().contains(query)
+                // 再按搜索关键字过滤
+                val query = searchQuery.trim().lowercase()
+                val passSearch = query.isEmpty() ||
+                    app.name.lowercase().contains(query) ||
+                    app.packageName.lowercase().contains(query)
 
-            passFilter && passSearch
+                passFilter && passSearch
+            }
         }
     }
 
@@ -118,7 +138,7 @@ fun HistoryScreen() {
                             isSearching = false
                             searchQuery = ""
                         }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "关闭搜索")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "关闭搜索")
                         }
                     }
                 },
