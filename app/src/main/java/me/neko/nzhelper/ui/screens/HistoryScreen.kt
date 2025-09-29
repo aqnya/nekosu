@@ -27,7 +27,8 @@ import kotlinx.coroutines.withContext
 
 data class AppInfo(
     val name: String,
-    val packageName: String
+    val packageName: String,
+    val uid: Int
 )
 
 enum class FilterMode(val label: String) {
@@ -58,7 +59,8 @@ fun HistoryScreen() {
                     pkgInfo.applicationInfo?.let { appInfo ->
                         AppInfo(
                             name = appInfo.loadLabel(pm).toString(),
-                            packageName = pkgInfo.packageName
+                            packageName = pkgInfo.packageName,
+                            uid = appInfo.uid
                         )
                     }
                 }
@@ -190,7 +192,12 @@ fun HistoryScreen() {
                     items(apps) { app ->
                         ListItem(
                             headlineContent = { Text(app.name) },
-                            supportingContent = { Text(app.packageName) },
+                            supportingContent = { 
+                                Column {
+                                    Text(app.packageName)
+                                    Text("UID: ${app.uid}")
+                                }
+                            },
                             leadingContent = {
                                 val localContext = LocalContext.current
                                 var iconBitmap by remember(app.packageName) { mutableStateOf<ImageBitmap?>(null) }
