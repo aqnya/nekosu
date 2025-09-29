@@ -83,7 +83,7 @@ fun HistoryScreen() {
                     FilterMode.USER -> !app.isSystem
                 }
                 // 初始搜索为空
-                true
+                passFilter
             }
             apps = initialApps
             isLoading = false
