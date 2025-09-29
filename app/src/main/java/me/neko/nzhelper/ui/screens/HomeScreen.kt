@@ -27,30 +27,31 @@ fun HomeScreen() {
     ) {
         // 设备信息卡片
         InfoCard(
-            title = "设备信息",
-            content = listOf(
-                "设备型号: ${Build.MODEL}",
-                "制造商: ${Build.MANUFACTURER}",
-                "Android 版本: ${Build.VERSION.RELEASE}",
-                "SDK: ${Build.VERSION.SDK_INT}",
-                "设备: ${Build.DEVICE}",
-                "品牌: ${Build.BRAND}"
-            ),
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
+    title = "设备信息",
+    content = listOf(
+        "设备型号: ${Build.MODEL}",
+        "制造商: ${Build.MANUFACTURER}",
+        "Android 版本: ${Build.VERSION.RELEASE}",
+        "SDK: ${Build.VERSION.SDK_INT}",
+        "设备: ${Build.DEVICE}",
+        "品牌: ${Build.BRAND}"
+    ),
+    containerColor = MaterialTheme.colorScheme.primaryContainer,
+    onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
+)
 
-        Spacer(modifier = Modifier.height(16.dp))
+Spacer(modifier = Modifier.height(16.dp))
 
-        // 应用信息卡片
-        InfoCard(
-            title = "应用信息",
-            content = listOf(
-                "应用名称: ${context.applicationInfo.loadLabel(context.packageManager)}",
-                "版本: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                "包名: ${context.packageName}"
-            ),
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
+InfoCard(
+    title = "应用信息",
+    content = listOf(
+        "应用名称: ${context.applicationInfo.loadLabel(context.packageManager)}",
+        "版本: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+        "包名: ${context.packageName}"
+    ),
+    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+    onContainerColor = MaterialTheme.colorScheme.onSecondaryContainer
+)
     }
 }
 
@@ -58,32 +59,32 @@ fun HomeScreen() {
 fun InfoCard(
     title: String,
     content: List<String>,
-    containerColor: androidx.compose.ui.graphics.Color
+    containerColor: androidx.compose.ui.graphics.Color,
+    onContainerColor: androidx.compose.ui.graphics.Color
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), // 去除阴影
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = onContainerColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             content.forEach { line ->
                 Text(
                     text = line,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = onContainerColor
                 )
             }
         }
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
