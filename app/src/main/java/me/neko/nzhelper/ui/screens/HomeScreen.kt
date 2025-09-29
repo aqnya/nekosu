@@ -9,12 +9,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.BuildUpdate
 import androidx.compose.material.icons.filled.DeviceHub
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import me.neko.nzhelper.BuildConfig
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
@@ -81,7 +82,7 @@ fun HomeScreen() {
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.BuildUpdate,
+                        imageVector = Icons.Filled.SystemUpdate,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error
                     )
@@ -141,37 +142,38 @@ data class DeviceInfo(
 
 private fun getDeviceInfo(): List<DeviceInfo> = listOf(
     DeviceInfo(
-        icon = Icons.Default.Build,
+        icon = Icons.Filled.Build,
         label = "内核版本",
         value = System.getProperty("os.version") ?: "Unknown"
     ),
     DeviceInfo(
-        icon = Icons.Default.Android,
+        icon = Icons.Filled.Android,
         label = "Android 版本",
         value = Build.VERSION.RELEASE
     ),
     DeviceInfo(
-        icon = Icons.Default.PhoneAndroid,
+        icon = Icons.Filled.PhoneAndroid,
         label = "设备",
         value = Build.MODEL
     ),
     DeviceInfo(
-        icon = Icons.Default.Settings,
+        icon = Icons.Filled.Settings,
         label = "应用版本",
         value = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
     ),
     DeviceInfo(
-        icon = Icons.Default.DeviceHub,
+        icon = Icons.Filled.DeviceHub,
         label = "钩子类型",
         value = "Unknown" // TODO: 动态获取
     ),
     DeviceInfo(
-        icon = Icons.Default.Security,
+        icon = Icons.Filled.Security,
         label = "SELinux 状态",
         value = "强制执行" // TODO: 动态检查
     )
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InfoRow(info: DeviceInfo) {
     Row(
@@ -207,6 +209,7 @@ fun InfoRow(info: DeviceInfo) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
