@@ -140,7 +140,7 @@ fun HistoryScreen() {
                             isSearching = false
                             searchQuery = ""
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "关闭搜索")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack,,, contentDescription = "关闭搜索")
                         }
                     }
                 },
