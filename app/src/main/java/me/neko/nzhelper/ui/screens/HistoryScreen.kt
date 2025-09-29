@@ -43,7 +43,7 @@ fun HistoryScreen() {
     val context = LocalContext.current
     var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-    var filterMode by remember { mutableStateOf(FilterMode.ALL) }
+    var filterMode by remember { mutableStateOf(FilterMode.USER) }
     var menuExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
