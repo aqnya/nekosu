@@ -217,7 +217,7 @@ fun HistoryScreen() {
                                 // TODO: 点击后执行操作
                             }
                         )
-                        Divider()
+                        HorizontalDivider()
                     }
                 }
             }
