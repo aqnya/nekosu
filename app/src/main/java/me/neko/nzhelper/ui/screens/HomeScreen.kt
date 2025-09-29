@@ -42,14 +42,14 @@ fun HomeScreen() {
                         fontWeight = FontWeight.Bold
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = { /* TODO: 打开抽屉或导航 */ }) {
+              /*  navigationIcon = {
+                    IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "菜单"
                         )
                     }
-                },
+                },*/
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
