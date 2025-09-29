@@ -47,6 +47,7 @@ fun HistoryScreen() {
     var menuExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
 
     // 加载所有应用（只在启动时）
     LaunchedEffect(Unit) {
@@ -65,6 +66,7 @@ fun HistoryScreen() {
                 .sortedBy { it.name.lowercase() }
             allApps = installed
             apps = installed
+            isLoading = false  // 新增：加载完成后关闭 loading
         }
     }
 
@@ -150,38 +152,39 @@ fun HistoryScreen() {
             )
         }
     ) { innerPadding ->
-        if (apps.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            // 新增：三路判断
+            if (isLoading) {
                 CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(apps) { app ->
-                    ListItem(
-                        headlineContent = { Text(app.name) },
-                        supportingContent = { Text(app.packageName) },
-                        leadingContent = {
-                            Image(
-                                bitmap = app.icon,
-                                contentDescription = app.name,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            // TODO: 点击后执行操作
-                        }
-                    )
-                    Divider()
+            } else if (apps.isEmpty()) {
+                Text("没有找到应用")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    items(apps) { app ->
+                        ListItem(
+                            headlineContent = { Text(app.name) },
+                            supportingContent = { Text(app.packageName) },
+                            leadingContent = {
+                                Image(
+                                    bitmap = app.icon,
+                                    contentDescription = app.name,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                // TODO: 点击后执行操作
+                            }
+                        )
+                        Divider()
+                    }
                 }
             }
         }
