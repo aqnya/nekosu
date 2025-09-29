@@ -28,7 +28,9 @@ import kotlinx.coroutines.withContext
 data class AppInfo(
     val name: String,
     val packageName: String,
-    val uid: Int
+    val uid: Int,
+    val isSystem: Boolean,
+    val isLaunchable: Boolean
 )
 
 enum class FilterMode(val label: String) {
@@ -57,10 +59,15 @@ fun HistoryScreen() {
             val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
                 .mapNotNull { pkgInfo ->
                     pkgInfo.applicationInfo?.let { appInfo ->
+                        val name = appInfo.loadLabel(pm).toString()
+                        val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                        val isLaunchable = pm.getLaunchIntentForPackage(pkgInfo.packageName) != null
                         AppInfo(
-                            name = appInfo.loadLabel(pm).toString(),
+                            name = name,
                             packageName = pkgInfo.packageName,
-                            uid = appInfo.uid
+                            uid = appInfo.uid,
+                            isSystem = isSystem,
+                            isLaunchable = isLaunchable
                         )
                     }
                 }
@@ -71,15 +78,9 @@ fun HistoryScreen() {
             val initialApps = installed.filter { app ->
                 val passFilter = when (filterMode) {
                     FilterMode.ALL -> true
-                    FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
-                    FilterMode.SYSTEM -> {
-                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    }
-                    FilterMode.USER -> {
-                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
-                    }
+                    FilterMode.LAUNCHABLE -> app.isLaunchable
+                    FilterMode.SYSTEM -> app.isSystem
+                    FilterMode.USER -> !app.isSystem
                 }
                 // 初始搜索为空
                 true
@@ -92,20 +93,13 @@ fun HistoryScreen() {
     // 根据过滤器 + 搜索条件动态更新（排除初始加载）
     LaunchedEffect(filterMode, searchQuery) {
         if (allApps.isNotEmpty()) {
-            val pm: PackageManager = context.packageManager
             apps = allApps.filter { app ->
                 // 先按过滤器筛选
                 val passFilter = when (filterMode) {
                     FilterMode.ALL -> true
-                    FilterMode.LAUNCHABLE -> pm.getLaunchIntentForPackage(app.packageName) != null
-                    FilterMode.SYSTEM -> {
-                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    }
-                    FilterMode.USER -> {
-                        val appInfo = pm.getApplicationInfo(app.packageName, 0)
-                        (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0
-                    }
+                    FilterMode.LAUNCHABLE -> app.isLaunchable
+                    FilterMode.SYSTEM -> app.isSystem
+                    FilterMode.USER -> !app.isSystem
                 }
                 // 再按搜索关键字过滤
                 val query = searchQuery.trim().lowercase()
@@ -140,7 +134,7 @@ fun HistoryScreen() {
                             isSearching = false
                             searchQuery = ""
                         }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack,,, contentDescription = "关闭搜索")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "关闭搜索")
                         }
                     }
                 },
