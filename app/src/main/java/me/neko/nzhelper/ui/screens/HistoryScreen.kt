@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
@@ -26,8 +27,7 @@ import kotlinx.coroutines.withContext
 
 data class AppInfo(
     val name: String,
-    val packageName: String,
-    val icon: ImageBitmap
+    val packageName: String
 )
 
 enum class FilterMode(val label: String) {
@@ -49,7 +49,7 @@ fun HistoryScreen() {
     var isSearching by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 加载所有应用（只在启动时）
+    // 加载所有应用（只在启动时，不加载图标）
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm: PackageManager = context.packageManager
@@ -58,15 +58,14 @@ fun HistoryScreen() {
                     pkgInfo.applicationInfo?.let { appInfo ->
                         AppInfo(
                             name = appInfo.loadLabel(pm).toString(),
-                            packageName = pkgInfo.packageName,
-                            icon = appInfo.loadIcon(pm).toBitmap().asImageBitmap()
+                            packageName = pkgInfo.packageName
                         )
                     }
                 }
                 .sortedBy { it.name.lowercase() }
             allApps = installed
             apps = installed
-            isLoading = false  // 新增：加载完成后关闭 loading
+            isLoading = false
         }
     }
 
@@ -158,7 +157,7 @@ fun HistoryScreen() {
                 .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            // 新增：三路判断
+            // 三路判断
             if (isLoading) {
                 CircularProgressIndicator()
             } else if (apps.isEmpty()) {
@@ -173,11 +172,46 @@ fun HistoryScreen() {
                             headlineContent = { Text(app.name) },
                             supportingContent = { Text(app.packageName) },
                             leadingContent = {
-                                Image(
-                                    bitmap = app.icon,
-                                    contentDescription = app.name,
-                                    modifier = Modifier.size(40.dp)
-                                )
+                                val localContext = LocalContext.current
+                                var iconBitmap by remember(app.packageName) { mutableStateOf<ImageBitmap?>(null) }
+                                var isLoadingIcon by remember(app.packageName) { mutableStateOf(true) }
+
+                                LaunchedEffect(app.packageName) {
+                                    withContext(Dispatchers.IO) {
+                                        try {
+                                            val drawable = localContext.packageManager.getApplicationIcon(app.packageName)
+                                            val bitmap = drawable.toBitmap()
+                                            iconBitmap = bitmap.asImageBitmap()
+                                        } catch (e: Exception) {
+                                            // 加载失败，使用默认图标
+                                        } finally {
+                                            isLoadingIcon = false
+                                        }
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier.size(40.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isLoadingIcon) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    } else if (iconBitmap != null) {
+                                        Image(
+                                            bitmap = iconBitmap!!,
+                                            contentDescription = app.name,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Android,
+                                            contentDescription = app.name,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    }
+                                }
                             },
                             modifier = Modifier.clickable {
                                 // TODO: 点击后执行操作
