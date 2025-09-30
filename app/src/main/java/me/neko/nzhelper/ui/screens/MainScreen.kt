@@ -3,6 +3,9 @@ package me.neko.nzhelper.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
@@ -133,14 +136,50 @@ fun MainScreen() {
             startDestination = BottomNavItem.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomNavItem.Home.route) { HomeScreen() }
-            composable(BottomNavItem.History.route) { HistoryScreen() }
-            composable(BottomNavItem.Settings.route) { SettingsScreen(navController) }
-            composable("about") { AboutScreen(navController) }
-            composable("logcat") {
-    LogcatScreen(navController)
-}
-            composable("open_source") { OpenSourceScreen(navController) }
+            composable(
+                route = BottomNavItem.Home.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) { HomeScreen() }
+            composable(
+                route = BottomNavItem.History.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) { HistoryScreen() }
+            composable(
+                route = BottomNavItem.Settings.route,
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) { SettingsScreen(navController) }
+            composable(
+                route = "about",
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) { AboutScreen(navController) }
+            composable(
+                route = "logcat",
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) {
+                LogcatScreen(navController)
+            }
+            composable(
+                route = "open_source",
+                enterTransition = { fadeIn(animationSpec = tween(300)) },
+                exitTransition = { fadeOut(animationSpec = tween(300)) },
+                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+                popExitTransition = { fadeOut(animationSpec = tween(300)) }
+            ) { OpenSourceScreen(navController) }
         }
 
         if (showUpdateDialog && latestTag != null) {
