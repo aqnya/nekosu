@@ -95,6 +95,63 @@ fun HomeScreen() {
                 }
             }
 
+            // 设备信息卡片
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "设备信息",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PhoneAndroid,
+                            contentDescription = null
+                        )
+                        Text(
+                            text = "型号: ${Build.MODEL}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Android,
+                            contentDescription = null
+                        )
+                        Text(
+                            text = "Android 版本: ${Build.VERSION.RELEASE}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Build,
+                            contentDescription = null
+                        )
+                        Text(
+                            text = "SDK 版本: ${Build.VERSION.SDK_INT}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+
         }
     }
 }
