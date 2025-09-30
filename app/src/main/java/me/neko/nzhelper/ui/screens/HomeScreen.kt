@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DeviceHub
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
@@ -35,22 +34,15 @@ fun HomeScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "NzHelper", // 硬编码标题
+                        text = "NzHelper",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                 },
-              /*  navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "菜单"
-                        )
-                    }
-                },*/
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
@@ -61,9 +53,10 @@ fun HomeScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 状态卡片（未安装/未配置） - 添加点击效果
+            // 状态卡片 (MD3 风格)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -71,15 +64,15 @@ fun HomeScreen() {
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp) // 添加轻微阴影提升交互感
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SystemUpdate,
@@ -88,13 +81,13 @@ fun HomeScreen() {
                     )
                     Column {
                         Text(
-                            text = "未安装", // 硬编码
+                            text = "未安装",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "点击安装", // 硬编码
+                            text = "点击安装",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -102,27 +95,25 @@ fun HomeScreen() {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 信息列表卡片 - 使用 LazyColumn 支持滚动（未来扩展）
+            // 信息卡片 (MD3 风格)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 LazyColumn(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(getDeviceInfo()) { info ->
+                    val infos = getDeviceInfo()
+                    items(infos) { info ->
                         InfoRow(info = info)
-                        // 添加分隔线（除了最后一个）
-                        if (info != getDeviceInfo().last()) {
-                            Divider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                        if (info != infos.last()) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 40.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
                         }
@@ -173,13 +164,13 @@ private fun getDeviceInfo(): List<DeviceInfo> = listOf(
     )
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InfoRow(info: DeviceInfo) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(4.dp)) // 轻微圆角提升视觉
+            .clip(RoundedCornerShape(8.dp))
+            .padding(vertical = 4.dp)
             .semantics {
                 contentDescription = info.contentDescription ?: "${info.label}: ${info.value}"
             },
@@ -197,7 +188,7 @@ fun InfoRow(info: DeviceInfo) {
             )
             Text(
                 text = info.label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -209,11 +200,12 @@ fun InfoRow(info: DeviceInfo) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = lightColorScheme() // 预览用 MD3 配色
+    ) {
         HomeScreen()
     }
 }
