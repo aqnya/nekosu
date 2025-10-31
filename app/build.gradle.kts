@@ -42,33 +42,81 @@ android {
         versionName = "0.0.13-alpha.r$commitCount.$gitHash"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // C++ configuration
+        externalNativeBuild {
+            cmake {
+                cppFlags("-std=c++17", "-frtti", "-fexceptions")
+                arguments("-DANDROID_STL=c++_shared")
+            }
+        }
+
+        // NDK ABI filters
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
-            isShrinkResources = true // 移除无用资源
+            isShrinkResources = true // Remove unused resources
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Release build optimization for C++
+            externalNativeBuild {
+                cmake {
+                    cppFlags("-O3")
+                }
+            }
+        }
+        debug {
+            // Debug flags for C++
+            externalNativeBuild {
+                cmake {
+                    cppFlags("-g", "-O0")
+                }
+            }
         }
     }
+
+    // External native build configuration for C++
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlin {
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
         }
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
     }
 
-    // 构建时的包名
+    // Packaging options for native libraries
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    // Custom APK file name
     android.applicationVariants.all {
         outputs.all {
             if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
@@ -78,11 +126,9 @@ android {
             }
         }
     }
-
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -90,8 +136,8 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-     implementation("androidx.compose.material:material-icons-extended:1.7.3")
-     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("androidx.compose.material:material-icons-extended:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.gson)
