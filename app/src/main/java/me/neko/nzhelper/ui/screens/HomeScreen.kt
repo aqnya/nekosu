@@ -117,11 +117,6 @@ fun HomeScreen() {
                     Toast.makeText(context, "已复制到剪贴板", Toast.LENGTH_SHORT).show()
                 }
             )
-
-            // 快速操作卡片
-            QuickActionsCard(
-                modifier = Modifier.fillMaxWidth()
-            )
         }
     }
 }
