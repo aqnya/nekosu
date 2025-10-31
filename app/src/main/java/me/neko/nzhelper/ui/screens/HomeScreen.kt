@@ -331,7 +331,7 @@ fun QuickActionsCard(
             title = "存储信息",
             description = "查看存储空间"
         )
-    ]
+    )
 
     Card(
         modifier = modifier,
