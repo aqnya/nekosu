@@ -38,8 +38,7 @@ class CrashHandler(private val context: Context) : Thread.UncaughtExceptionHandl
                     printWriter.println("Model: ${Build.MODEL}")
                     printWriter.println("Android Version: ${Build.VERSION.RELEASE}")
                     printWriter.println("SDK Version: ${Build.VERSION.SDK_INT}")
-                    printWriter.println("
-Stack Trace:")
+                    printWriter.println("Stack Trace:")
                     printWriter.println("============")
                     val sw = StringWriter()
                     val pw = PrintWriter(sw)
