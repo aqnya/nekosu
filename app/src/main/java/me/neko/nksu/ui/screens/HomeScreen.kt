@@ -3,29 +3,26 @@ package me.neko.nksu.ui.screens
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberRipple
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.ripple.rememberRipple
-import androidx.compose.ui.graphics.vector.ImageVector
 import me.neko.nksu.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,16 +59,9 @@ fun HomeScreen() {
             val interactionSourceForInstallCard = remember { MutableInteractionSource() }
             Card(
                 modifier = Modifier
-                    .indication(
-                        interactionSource = interactionSourceForInstallCard,
-                        indication = rememberRipple(
-                            bounded = true,
-                            radius = 999.dp
-                        )
-                    )
                     .clickable(
                         interactionSource = interactionSourceForInstallCard,
-                        indication = null,
+                        indication = rememberRipple(bounded = true),
                         enabled = true
                     ) {
                         // TODO: 导航到安装页面
@@ -249,7 +239,7 @@ fun DeviceInfoCard(
                     )
                     DeviceInfoItem(
                         icon = Icons.Filled.Apps,
-                        title = "Android 版本",
+                        title = "SDK 版本",
                         value = "SDK ${Build.VERSION.SDK_INT}",
                         modifier = Modifier.weight(1f),
                         onCopy = onInfoCopy
@@ -271,17 +261,9 @@ fun DeviceInfoItem(
     val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = modifier
-            .indication(
-                interactionSource = interactionSource,
-                indication = rememberRipple(
-                    bounded = true,
-                    radius = 999.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) // 可选：自定义水波纹颜色
-                )
-            )
             .clickable(
                 interactionSource = interactionSource,
-                indication = null
+                indication = rememberRipple(bounded = true)
             ) { onCopy("$title: $value") },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
