@@ -107,7 +107,7 @@ android {
     }
 
     // Packaging options for native libraries
-    packagingOptions {
+    packaging {
         jniLibs {
             useLegacyPackaging = true
         }
