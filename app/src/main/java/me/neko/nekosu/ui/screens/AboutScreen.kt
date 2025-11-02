@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.screens
+package me.neko.nksu.ui.screens
 
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -52,7 +52,7 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import me.neko.Nekosu.R
+import me.neko.nksu.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,4 +1,4 @@
-package me.neko.Nekosu
+package me.neko.nksu
 
 import org.junit.Test
 

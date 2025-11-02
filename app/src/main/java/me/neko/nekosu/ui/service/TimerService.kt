@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.service
+package me.neko.nksu.ui.service
 
 import android.Manifest
 import android.app.Service
@@ -20,8 +20,8 @@ import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import me.neko.Nekosu.R
-import me.neko.Nekosu.ui.util.NotificationUtil
+import me.neko.nksu.R
+import me.neko.nksu.ui.util.NotificationUtil
 
 /**
  * 前台计时服务
@@ -117,9 +117,9 @@ class TimerService : Service() {
     }
 
     companion object {
-        const val ACTION_START = "me.neko.Nekosu.ACTION_START"
-        const val ACTION_PAUSE = "me.neko.Nekosu.ACTION_PAUSE"
-        const val ACTION_STOP  = "me.neko.Nekosu.ACTION_STOP"
+        const val ACTION_START = "me.neko.nksu.ACTION_START"
+        const val ACTION_PAUSE = "me.neko.nksu.ACTION_PAUSE"
+        const val ACTION_STOP  = "me.neko.nksu.ACTION_STOP"
         const val NOTIF_ID = 1001
     }
 

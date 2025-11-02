@@ -32,7 +32,7 @@
         </activity>
 
         <service
-            android:name="me.neko.Nekosu.ui.service.TimerService"
+            android:name="me.neko.nksu.ui.service.TimerService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
     </application>

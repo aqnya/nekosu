@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.theme
+package me.neko.nksu.ui.theme
 
 import android.app.Activity
 import android.os.Build

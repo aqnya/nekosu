@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.screens
+package me.neko.nksu.ui.screens
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager

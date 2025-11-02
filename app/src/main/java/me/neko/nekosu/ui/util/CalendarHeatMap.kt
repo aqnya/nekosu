@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.util
+package me.neko.nksu.ui.util
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
-import me.neko.Nekosu.data.Session
+import me.neko.nksu.data.Session
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

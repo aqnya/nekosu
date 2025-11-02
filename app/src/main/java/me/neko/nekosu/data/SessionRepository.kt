@@ -1,4 +1,4 @@
-package me.neko.Nekosu.data
+package me.neko.nksu.data
 
 import android.content.Context
 import androidx.core.content.edit

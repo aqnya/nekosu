@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.util
+package me.neko.nksu.ui.util
 
 import android.util.Log
 import com.squareup.moshi.Json

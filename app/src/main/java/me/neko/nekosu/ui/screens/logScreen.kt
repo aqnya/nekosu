@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.screens
+package me.neko.nksu.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

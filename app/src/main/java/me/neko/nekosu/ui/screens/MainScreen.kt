@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.screens
+package me.neko.nksu.ui.screens
 
 import android.content.Context
 import android.content.Intent
@@ -36,9 +36,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import me.neko.Nekosu.BuildConfig
-import me.neko.Nekosu.ui.util.BottomNavItem
-import me.neko.Nekosu.ui.util.UpdateChecker
+import me.neko.nksu.BuildConfig
+import me.neko.nksu.ui.util.BottomNavItem
+import me.neko.nksu.ui.util.UpdateChecker
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {

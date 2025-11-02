@@ -8,7 +8,7 @@
 extern "C" {
 
 JNIEXPORT jstring JNICALL
-Java_me_neko_Nekosu_MainActivity_stringFromJNI(
+Java_me.neko.nksu_MainActivity_stringFromJNI(
     JNIEnv* env,
     jobject /* this */) {
     std::string hello = "Hello from C++";
@@ -17,7 +17,7 @@ Java_me_neko_Nekosu_MainActivity_stringFromJNI(
 }
 
 JNIEXPORT jint JNICALL
-Java_me_neko_Nekosu_MainActivity_calculateFromJNI(
+Java_me.neko.nksu_MainActivity_calculateFromJNI(
     JNIEnv* env,
     jobject /* this */,
     jint a,

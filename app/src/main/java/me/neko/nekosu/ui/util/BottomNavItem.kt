@@ -1,4 +1,4 @@
-package me.neko.Nekosu.ui.util
+package me.neko.nksu.ui.util
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List

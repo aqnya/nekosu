@@ -27,11 +27,11 @@ fun getGitShortHash(): String {
 }
 
 android {
-    namespace = "me.neko.Nekosu"
+    namespace = "me.neko.nksu"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.neko.Nekosu"
+        applicationId = "me.neko.nksu"
         minSdk = 26
         targetSdk = 36
 
