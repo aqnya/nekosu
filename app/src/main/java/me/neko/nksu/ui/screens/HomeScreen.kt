@@ -6,10 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
-// rememberRipple 已弃用，改用 Material3 的 ripple()
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -55,10 +55,13 @@ fun HomeScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 状态卡片 (MD3 风格) - 已修复水波纹
+            // 状态卡片 (MD3 风格) - 圆形波纹效果
             Card(
                 modifier = Modifier
-                    .clickable(enabled = true) {
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = rememberRipple(bounded = true)
+                    ) {
                         // TODO: 导航到安装页面
                     },
                 colors = CardDefaults.cardColors(
@@ -253,10 +256,14 @@ fun DeviceInfoItem(
     modifier: Modifier = Modifier,
     onCopy: (String) -> Unit = {}
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = modifier
-            .clickable { onCopy("$title: $value") },
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = rememberRipple(bounded = true)
+            ) {
+                onCopy("$title: $value")
+            },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
