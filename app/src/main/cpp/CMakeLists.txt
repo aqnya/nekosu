@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.18.1)
 
-project("nzhelper")
+project("Nekosu")
 
 set(CMAKE_CXX_STANDARD 17)
 
 # Create native library
 add_library(
-    nzhelper
+    Nekosu
     SHARED
     native-lib.cpp
 )
@@ -19,7 +19,7 @@ find_library(
 
 # Link libraries
 target_link_libraries(
-    nzhelper
+    Nekosu
     android
     ${log-lib}
 )

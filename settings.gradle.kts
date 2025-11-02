@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NzHelper"
+rootProject.name = "Nekosu"
 include(":app")

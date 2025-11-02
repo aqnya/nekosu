@@ -27,11 +27,11 @@ fun getGitShortHash(): String {
 }
 
 android {
-    namespace = "me.neko.nzhelper"
+    namespace = "me.neko.Nekosu"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "me.neko.nzhelper"
+        applicationId = "me.neko.Nekosu"
         minSdk = 26
         targetSdk = 36
 
@@ -122,7 +122,7 @@ android {
             if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
                 val config = project.android.defaultConfig
                 val versionName = config.versionName
-                this.outputFileName = "NzHelper_v${versionName}.apk"
+                this.outputFileName = "Nekosu_v${versionName}.apk"
             }
         }
     }

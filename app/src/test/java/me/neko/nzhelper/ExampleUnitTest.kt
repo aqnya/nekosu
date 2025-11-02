@@ -1,4 +1,4 @@
-package me.neko.nzhelper
+package me.neko.Nekosu
 
 import org.junit.Test
 
