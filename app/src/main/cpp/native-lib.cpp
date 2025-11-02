@@ -2,13 +2,13 @@
 #include <string>
 #include <android/log.h>
 
-#define LOG_TAG "Nekosu"
+#define LOG_TAG "nksu"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 extern "C" {
 
 JNIEXPORT jstring JNICALL
-Java_me.neko.nksu_MainActivity_stringFromJNI(
+Java_me_neko_nksu_MainActivity_stringFromJNI(
     JNIEnv* env,
     jobject /* this */) {
     std::string hello = "Hello from C++";
@@ -17,7 +17,7 @@ Java_me.neko.nksu_MainActivity_stringFromJNI(
 }
 
 JNIEXPORT jint JNICALL
-Java_me.neko.nksu_MainActivity_calculateFromJNI(
+Java_me_neko_nksu_MainActivity_calculateFromJNI(
     JNIEnv* env,
     jobject /* this */,
     jint a,
