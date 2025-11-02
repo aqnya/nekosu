@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.ripple.rememberRipple
+// rememberRipple 已弃用，改用 Material3 的 ripple()
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -56,14 +56,9 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 状态卡片 (MD3 风格) - 已修复水波纹
-            val interactionSourceForInstallCard = remember { MutableInteractionSource() }
             Card(
                 modifier = Modifier
-                    .clickable(
-                        interactionSource = interactionSourceForInstallCard,
-                        indication = rememberRipple(bounded = true),
-                        enabled = true
-                    ) {
+                    .clickable(enabled = true) {
                         // TODO: 导航到安装页面
                     },
                 colors = CardDefaults.cardColors(
@@ -261,10 +256,7 @@ fun DeviceInfoItem(
     val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = modifier
-            .clickable(
-                interactionSource = interactionSource,
-                indication = rememberRipple(bounded = true)
-            ) { onCopy("$title: $value") },
+            .clickable { onCopy("$title: $value") },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
