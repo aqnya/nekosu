@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.ui.graphics.vector.ImageVector
 import me.neko.nksu.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
