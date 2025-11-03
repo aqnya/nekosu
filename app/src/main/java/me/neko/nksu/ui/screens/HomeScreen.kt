@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ripple.rememberRipple
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
@@ -58,10 +58,7 @@ fun HomeScreen() {
             // 状态卡片 (MD3 风格) - 圆形波纹效果
             Card(
                 modifier = Modifier
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = rememberRipple(bounded = true)
-                    ) {
+                    .clickable(interactionSource = remember { MutableInteractionSource() }) {
                         // TODO: 导航到安装页面
                     },
                 colors = CardDefaults.cardColors(
@@ -258,10 +255,7 @@ fun DeviceInfoItem(
 ) {
     Card(
         modifier = modifier
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(bounded = true)
-            ) {
+            .clickable(interactionSource = remember { MutableInteractionSource() }) {
                 onCopy("$title: $value")
             },
         shape = RoundedCornerShape(12.dp),
