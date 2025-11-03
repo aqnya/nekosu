@@ -2,17 +2,13 @@ package me.neko.nksu.ui.screens
 
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,12 +51,12 @@ fun HomeScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 状态卡片 (MD3 风格) - 圆形波纹效果
+            // 状态卡片 (MD3 风格) - 使用 onClick 自动适配圆角水波纹
             Card(
-                modifier = Modifier
-                    .clickable(interactionSource = remember { MutableInteractionSource() }) {
-                        // TODO: 导航到安装页面
-                    },
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    // TODO: 导航到安装页面
+                },
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer
                 ),
@@ -254,10 +250,10 @@ fun DeviceInfoItem(
     onCopy: (String) -> Unit = {}
 ) {
     Card(
-        modifier = modifier
-            .clickable(interactionSource = remember { MutableInteractionSource() }) {
-                onCopy("$title: $value")
-            },
+        modifier = modifier,
+        onClick = {  // 使用 onClick 自动适配圆角水波纹
+            onCopy("$title: $value")
+        },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
