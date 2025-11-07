@@ -79,11 +79,18 @@ jobs:
         fi
       continue-on-error: true
 
-    - name: Build kernel with modules
+    - name: Build kernel with modules built-in
       run: |
         cd ${{ github.workspace }}/kernel-src
+        echo "=== Configuring kernel to build all modules in (disable loadable modules) ==="
+        tools/bazel run --config=fast //common-modules/virtual-device:virtual_device_x86_64_config -- scripts/config --disable MODULES
+        if [ $? -ne 0 ]; then
+          echo "⚠️ Failed to disable MODULES, check logs"
+          exit 1
+        fi
+        echo "✅ CONFIG_MODULES disabled, modules will be built-in"
         tools/bazel run --config=fast --lto=none //common-modules/virtual-device:virtual_device_x86_64_dist
-        echo "✅ Kernel build completed"
+        echo "✅ Kernel build completed (with built-in modules)"
 
     - name: Set artifact name
       id: set-artifact-name
@@ -113,7 +120,7 @@ jobs:
         echo "Copying kernel images..."
         find "$DIST_DIR" -maxdepth 1 -type f \( -name "bzImage" -o -name "Image" -o -name "vmlinux" \) \
           -exec cp -v {} upload/ \;
-        echo "Copying kernel modules..."
+        echo "Copying kernel modules (if any, but expected none since built-in)..."
         if [ -d "$DIST_DIR" ]; then
           find "$DIST_DIR" -name "*.ko" -exec cp -v {} upload/lib/modules/ \;
           if [ -d "$DIST_DIR/lib/modules" ]; then
@@ -123,7 +130,7 @@ jobs:
         echo "=== Collected kernel artifacts ==="
         ls -lh upload/
         echo "=== Collected modules ==="
-        find upload/lib/modules -name "*.ko" -ls || echo "No modules found"
+        find upload/lib/modules -name "*.ko" -ls || echo "No modules found (as expected, all built-in)"
         if [ -z "$(ls -A upload/)" ]; then
           echo "❌ ERROR: No kernel artifacts found!"
           exit 1
@@ -137,6 +144,9 @@ jobs:
           touch "upload/lib/modules/$KERNEL_VER/modules.order"
           echo "✅ Module structure created"
           ls -lR upload/lib/modules/
+        else
+          echo "✅ No separate modules, all built-in to kernel"
+          rm -rf upload/lib/modules  # Clean up empty dir
         fi
         cd upload
         tar -czf ../kernel-build.tar.gz *
@@ -199,122 +209,10 @@ jobs:
           MODULE_COUNT=$(find kernel-extracted/lib/modules -name "*.ko" | wc -l)
           echo "✅ Found $MODULE_COUNT kernel modules"
         else
-          echo "⚠️  No modules directory found"
+          echo "⚠️  No modules directory found (expected since built-in)"
         fi
 
-    - name: Download and extract default ramdisk
-      run: |
-        SYSTEM_IMAGE_DIR="$ANDROID_HOME/system-images/android-33/google_apis/x86_64"
-        if [ ! -d "$SYSTEM_IMAGE_DIR" ]; then
-          echo "Installing system image..."
-          yes | sdkmanager "system-images;android-33;google_apis;x86_64"
-        fi
-        if [ -f "$SYSTEM_IMAGE_DIR/ramdisk.img" ]; then
-          echo "✅ Found default ramdisk"
-          cp "$SYSTEM_IMAGE_DIR/ramdisk.img" ./default-ramdisk.img
-        else
-          echo "⚠️  No default ramdisk found, will create minimal one"
-          mkdir -p minimal-ramdisk
-          cd minimal-ramdisk
-          mkdir -p dev proc sys
-          echo "#!/system/bin/sh" > init
-          chmod +x init
-          find . | cpio -o -H newc | gzip > ../default-ramdisk.img
-          cd ..
-        fi
-
-    - name: Create custom ramdisk with modules
-      run: |
-        mkdir -p ramdisk-work
-        cd ramdisk-work
-        echo "=== Extracting default ramdisk ==="
-        if [ -f ../default-ramdisk.img ]; then
-          FILE_TYPE=$(file ../default-ramdisk.img)
-          if [[ "$FILE_TYPE" == *"LZ4"* ]]; then
-            echo "Detected LZ4 compression, using lz4 to decompress..."
-            lz4 -d -c ../default-ramdisk.img | cpio -idm 2>/dev/null || {
-              echo "⚠️ Failed to extract ramdisk with lz4"
-              mkdir -p system/bin dev proc sys  # Fallback to minimal structure
-            }
-          elif [[ "$FILE_TYPE" == *"gzip"* ]]; then
-            echo "Detected gzip compression, using gzip to decompress..."
-            gzip -dc ../default-ramdisk.img | cpio -idm 2>/dev/null || {
-              echo "⚠️ Failed to extract ramdisk with gzip"
-              mkdir -p system/bin dev proc sys  # Fallback to minimal structure
-            }
-          else
-            echo "⚠️ Unknown compression type: $FILE_TYPE"
-            mkdir -p system/bin dev proc sys  # Fallback
-          fi
-        fi
-        mkdir -p lib/modules
-        if [ -d ../kernel-extracted/lib/modules ]; then
-          echo "=== Copying kernel modules ==="
-          cp -rv ../kernel-extracted/lib/modules/* lib/modules/
-          echo "=== Modules in ramdisk ==="
-          find lib/modules -name "*.ko" -exec ls -lh {} \;
-          MODULE_COUNT=$(find lib/modules -name "*.ko" | wc -l)
-          echo "✅ Copied $MODULE_COUNT modules to ramdisk"
-          # Ensure module permissions
-          find lib/modules -type d -exec chmod 755 {} \;
-          find lib/modules -type f -name "*.ko" -exec chmod 644 {} \;
-        else
-          echo "⚠️ No modules found to copy"
-        fi
-        echo "=== Creating init wrapper ==="
-        if [ -f init ] && [ ! -f init.original ]; then
-          mv init init.original
-        fi
-        cat > init << 'EOFMARKER'
-        #!/system/bin/sh
-        mount -t proc proc /proc 2>/dev/null || true
-        mount -t sysfs sys /sys 2>/dev/null || true
-        echo "=== Custom Init: Loading kernel modules ===" > /dev/kmsg 2>&1 || true
-        if [ -d /lib/modules ]; then
-          for kver_dir in /lib/modules/*; do
-            if [ -d "$kver_dir" ]; then
-              echo "Found module directory: $kver_dir" > /dev/kmsg 2>&1 || true
-              for module in "$kver_dir"/*.ko; do
-                if [ -f "$module" ]; then
-                  modname=$(basename "$module" .ko)
-                  echo "Loading module: $modname" > /dev/kmsg 2>&1 || true
-                  insmod "$module" 2>&1 | while read line; do
-                    echo "insmod: $line" > /dev/kmsg 2>&1 || true
-                  done
-                fi
-              done
-              if [ -f /proc/modules ]; then
-                echo "=== Loaded modules ===" > /dev/kmsg 2>&1 || true
-                cat /proc/modules > /dev/kmsg 2>&1 || true
-              fi
-            fi
-          done
-        else
-          echo "No /lib/modules directory found" > /dev/kmsg 2>&1 || true
-        fi
-        echo "=== Custom Init: Module loading complete ===" > /dev/kmsg 2>&1 || true
-        if [ -f /init.original ]; then
-          exec /init.original "$@"
-        elif [ -f /system/bin/init ]; then
-          exec /system/bin/init "$@"
-        else
-          echo "ERROR: No init found!" > /dev/kmsg 2>&1 || true
-          exec /bin/sh
-        fi
-        EOFMARKER
-        chmod +x init
-        echo "=== Creating new ramdisk image with LZ4 ==="
-        find . | cpio -o -H newc 2>/dev/null | lz4 -c -l -9 > ../custom-ramdisk.img
-        cd ..
-        echo "✅ Custom ramdisk created with LZ4"
-        ls -lh custom-ramdisk.img
-        echo "=== Verifying ramdisk contents ==="
-        mkdir -p ramdisk-verify
-        cd ramdisk-verify
-        lz4 -d -c ../custom-ramdisk.img | cpio -t 2>/dev/null | grep -E "(init|\.ko)" | head -20
-        cd ..
-
-    - name: Run emulator with custom kernel and modules
+    - name: Run emulator with custom kernel
       uses: reactivecircus/android-emulator-runner@v2
       timeout-minutes: 20
       with:
@@ -325,7 +223,7 @@ jobs:
         disk-size: 8192M
         heap-size: 512M
         emulator-boot-timeout: 900
-        emulator-options: -kernel ./kernel-extracted/${{ env.KERNEL_FILE }} -ramdisk ./custom-ramdisk.img -no-snapshot-load -no-snapshot-save -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -verbose -show-kernel
+        emulator-options: -kernel ./kernel-extracted/${{ env.KERNEL_FILE }} -no-snapshot-load -no-snapshot-save -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -verbose -show-kernel
         disable-animations: true
         force-avd-creation: false
         script: |
@@ -336,13 +234,12 @@ jobs:
           adb shell uname -a
           echo "=== Loaded Modules ==="
           adb shell lsmod || adb shell cat /proc/modules
-          echo "=== Boot Messages (module loading) ==="
-          adb shell dmesg | grep -i "module\|insmod\|custom init" || echo "No module logs found"
-          echo "=== Verify virtio modules ==="
-          adb shell "cat /proc/modules | grep virtio" || echo "virtio modules not in /proc/modules"
-          adb shell "ls -la /sys/module/" | grep virtio || echo "No virtio in /sys/module"
+          echo "=== Boot Messages ==="
+          adb shell dmesg | grep -i "custom init" || echo "No custom init logs (skipped ramdisk)"
+          echo "=== Verify virtio modules (built-in) ==="
+          adb shell "ls -la /sys/module/" | grep virtio || echo "No virtio in /sys/module (check dmesg for initialization)"
           echo "=== Check module directory ==="
-          adb shell "ls -lR /lib/modules/" 2>/dev/null || echo "No /lib/modules directory"
+          adb shell "ls -lR /lib/modules/" 2>/dev/null || echo "No /lib/modules directory (modules built-in)"
           echo "=== Full dmesg (last 100 lines) ==="
           adb shell dmesg | tail -100
           echo "✅ Test completed"
