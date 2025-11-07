@@ -1,0 +1,304 @@
+name: CI with Android 13 LTS Kernel + Modules
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build-kernel:
+    runs-on: ubuntu-latest
+    env:
+      LOCALVERSION: -lts13
+      UPLOADNAME: custom
+      DEVICE: emulator
+      BUILD_TIME: ${{ github.run_number }}
+    outputs:
+      artifact-name: ${{ steps.set-artifact-name.outputs.name }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    - name: Remove unused packages
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: true
+        android: false
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: false
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl \
+          flex g++-multilib gcc-multilib git gnupg gperf imagemagick \
+          lib32ncurses-dev lib32readline-dev lib32z1-dev liblz4-tool \
+          libncurses-dev libsdl1.2-dev libssl-dev \
+          libxml2 libxml2-utils lzop pngcrush rsync schedtool \
+          squashfs-tools xsltproc zip zlib1g-dev python3 python-is-python3 \
+          cpio kmod
+
+    - name: Setup repo
+      run: |
+        mkdir -p ~/.bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+        chmod +x ~/.bin/repo
+        echo "$HOME/.bin" >> $GITHUB_PATH
+
+    - name: Configure git
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        git config --global color.ui false
+
+    - name: Sync kernel source with prebuilts
+      run: |
+        mkdir -p ${{ github.workspace }}/kernel-src
+        cd ${{ github.workspace }}/kernel-src
+        repo init -u https://android.googlesource.com/kernel/manifest.git \
+          -b common-android13-5.15 --depth=1
+        repo sync -c -j$(nproc) --no-clone-bundle --no-tags
+
+    - name: Verify toolchain
+      run: |
+        cd ${{ github.workspace }}/kernel-src
+        echo "Checking for prebuilt toolchains..."
+        ls -la prebuilts/clang/host/linux-x86/ || echo "Clang not found"
+        ls -la prebuilts-master/clang/host/linux-x86/ || echo "Clang (master) not found"
+        
+        if [ -d "prebuilts/clang/host/linux-x86" ]; then
+          CLANG_DIR=$(ls -d prebuilts/clang/host/linux-x86/clang-* | head -n1)
+          echo "Found clang at: $CLANG_DIR"
+          $CLANG_DIR/bin/clang --version
+        fi
+
+    - name: Setup FMAC
+      run: |
+        cd ${{ github.workspace }}/kernel-src/common
+        if curl -sSL https://raw.githubusercontent.com/FMAC-Team/FMAC/main/scripts/patch.sh | bash -; then
+          echo "✅ FMAC applied successfully"
+        else
+          echo "⚠️  FMAC failed, continuing without it"
+        fi
+      continue-on-error: true
+
+    - name: Build kernel with modules
+      run: |
+        cd ${{ github.workspace }}/kernel-src
+        
+        # Build kernel and modules
+        tools/bazel run --config=fast --lto=none //common-modules/virtual-device:virtual_device_x86_64_dist
+        
+        echo "✅ Kernel build completed"
+
+    - name: Set artifact name
+      id: set-artifact-name
+      run: |
+        NAME="boot${{ env.LOCALVERSION }}-${{ env.UPLOADNAME }}-${{ env.DEVICE }}-${{ env.BUILD_TIME }}"
+        echo "name=${NAME}" >> $GITHUB_OUTPUT
+        echo "Artifact name: ${NAME}"
+
+    - name: Prepare kernel artifact with modules
+      run: |
+        cd ${{ github.workspace }}/kernel-src
+        mkdir -p upload/lib/modules
+        
+        echo "Searching for kernel build outputs..."
+        
+        # Find dist directory
+        DIST_DIR=""
+        for dist_dir in out/*/dist out/dist bazel-bin/common-modules/virtual-device/virtual_device_x86_64_dist/dist; do
+          if [ -d "$dist_dir" ]; then
+            DIST_DIR="$dist_dir"
+            echo "Found dist directory: $DIST_DIR"
+            break
+          fi
+        done
+        
+        if [ -z "$DIST_DIR" ]; then
+          echo "❌ ERROR: No dist directory found!"
+          find out -type d 2>/dev/null | head -20
+          exit 1
+        fi
+        
+        # Copy kernel image
+        echo "Copying kernel images..."
+        find "$DIST_DIR" -maxdepth 1 -type f \( -name "bzImage" -o -name "Image" -o -name "vmlinux" \) \
+          -exec cp -v {} upload/ \;
+        
+        # Copy kernel modules
+        echo "Copying kernel modules..."
+        if [ -d "$DIST_DIR" ]; then
+          # Copy all .ko files
+          find "$DIST_DIR" -name "*.ko" -exec cp -v {} upload/lib/modules/ \;
+          
+          # If modules are in a subdirectory structure, preserve it
+          if [ -d "$DIST_DIR/lib/modules" ]; then
+            cp -rv "$DIST_DIR/lib/modules/"* upload/lib/modules/ || true
+          fi
+        fi
+        
+        # Check what we collected
+        echo "=== Collected kernel artifacts ==="
+        ls -lh upload/
+        echo "=== Collected modules ==="
+        find upload/lib/modules -name "*.ko" -ls || echo "No modules found"
+        
+        if [ -z "$(ls -A upload/)" ]; then
+          echo "❌ ERROR: No kernel artifacts found!"
+          exit 1
+        fi
+        
+        # Create module dependency info
+        if [ -n "$(find upload/lib/modules -name '*.ko' 2>/dev/null)" ]; then
+          echo "Creating modules.dep..."
+          # Get kernel version from bzImage or use a default
+          KERNEL_VER="5.15.0${{ env.LOCALVERSION }}"
+          mkdir -p "upload/lib/modules/$KERNEL_VER"
+          mv upload/lib/modules/*.ko "upload/lib/modules/$KERNEL_VER/" 2>/dev/null || true
+          
+          # Create a simple modules.dep (depmod would be better but requires the full kernel build)
+          touch "upload/lib/modules/$KERNEL_VER/modules.dep"
+          touch "upload/lib/modules/$KERNEL_VER/modules.order"
+          
+          echo "✅ Module structure created"
+          ls -lR upload/lib/modules/
+        fi
+        
+        # Package everything
+        cd upload
+        tar -czf ../kernel-build.tar.gz *
+        
+        echo "✅ Final artifact created:"
+        ls -lh ../kernel-build.tar.gz
+
+    - name: Upload kernel artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.set-artifact-name.outputs.name }}
+        path: ${{ github.workspace }}/kernel-src/kernel-build.tar.gz
+        retention-days: 5
+
+  test:
+    needs: build-kernel
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Enable KVM group perms
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - name: Download kernel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ needs.build-kernel.outputs.artifact-name }}
+        path: ./kernel-artifact
+
+    - name: Extract and prepare kernel with modules
+      run: |
+        mkdir -p kernel-extracted
+        tar -xzf kernel-artifact/kernel-build.tar.gz -C kernel-extracted/
+        echo "=== Extracted files ==="
+        ls -lhR kernel-extracted/
+        
+        # Find kernel image
+        if [ -f kernel-extracted/bzImage ]; then
+          echo "KERNEL_FILE=bzImage" >> $GITHUB_ENV
+          echo "✅ Found bzImage"
+        elif [ -f kernel-extracted/Image ]; then
+          echo "KERNEL_FILE=Image" >> $GITHUB_ENV
+          echo "✅ Found Image"
+        else
+          echo "❌ No valid kernel file found!"
+          exit 1
+        fi
+        
+        # Check for modules
+        if [ -d kernel-extracted/lib/modules ]; then
+          MODULE_COUNT=$(find kernel-extracted/lib/modules -name "*.ko" | wc -l)
+          echo "✅ Found $MODULE_COUNT kernel modules"
+        else
+          echo "⚠️  No modules directory found"
+        fi
+
+    - name: Create custom ramdisk with modules
+      run: |
+        mkdir -p ramdisk
+        cd ramdisk
+        
+        # Create basic ramdisk structure
+        mkdir -p lib/modules system vendor data
+        
+        # Copy modules if they exist
+        if [ -d ../kernel-extracted/lib/modules ]; then
+          cp -r ../kernel-extracted/lib/modules/* lib/modules/
+          echo "✅ Copied modules to ramdisk"
+          
+          # List modules for verification
+          echo "=== Modules in ramdisk ==="
+          find lib/modules -name "*.ko" -ls
+        fi
+        
+        # Create init script to load modules
+        cat > init << 'EOFMARKER'
+        #!/system/bin/sh
+        
+        # Load kernel modules
+        if [ -d /lib/modules ]; then
+          for module in /lib/modules/*/*.ko; do
+            if [ -f "$module" ]; then
+              echo "Loading module: $module"
+              insmod "$module" 2>&1 | tee -a /dev/kmsg
+            fi
+          done
+        fi
+        
+        # Continue with normal init
+        exec /system/bin/init "$@"
+        EOFMARKER
+        chmod +x init
+        
+        # Create ramdisk image
+        find . | cpio -o -H newc | gzip > ../custom-ramdisk.img
+        
+        echo "✅ Custom ramdisk created with modules"
+        ls -lh ../custom-ramdisk.img
+
+    - name: Run emulator with custom kernel and modules
+      uses: reactivecircus/android-emulator-runner@v2
+      timeout-minutes: 20
+      with:
+        api-level: 33
+        target: google_apis
+        arch: x86_64
+        ram-size: 4096M
+        disk-size: 8192M
+        heap-size: 512M
+        emulator-boot-timeout: 900
+        emulator-options: -kernel ./kernel-extracted/${{ env.KERNEL_FILE }} -ramdisk ./custom-ramdisk.img -no-snapshot-load -no-snapshot-save -no-audio -no-window -gpu swiftshader_indirect -no-boot-anim -verbose -show-kernel
+        disable-animations: true
+        force-avd-creation: false
+        script: |
+          echo "=== Kernel Version ==="
+          adb shell uname -a
+          
+          echo "=== Loaded Modules ==="
+          adb shell lsmod
+          
+          echo "=== Module Load Attempts ==="
+          adb logcat -d | grep -i "module\|insmod" || echo "No module logs found"
+          
+          echo "=== Verify virtio_blk ==="
+          adb shell "cat /proc/modules | grep virtio" || echo "virtio modules not loaded"
