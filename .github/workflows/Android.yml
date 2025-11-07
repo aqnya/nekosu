@@ -229,11 +229,23 @@ jobs:
         cd ramdisk-work
         echo "=== Extracting default ramdisk ==="
         if [ -f ../default-ramdisk.img ]; then
-          gzip -dc ../default-ramdisk.img | cpio -idm 2>/dev/null || {
-            echo "⚠️  Failed to extract ramdisk"
-            file  ../default-ramdisk.img
-            mkdir -p system/bin dev proc sys
-          }
+          FILE_TYPE=$(file ../default-ramdisk.img)
+          if [[ "$FILE_TYPE" == *"LZ4"* ]]; then
+            echo "Detected LZ4 compression, using lz4 to decompress..."
+            lz4 -d -c ../default-ramdisk.img | cpio -idm 2>/dev/null || {
+              echo "⚠️ Failed to extract ramdisk with lz4"
+              mkdir -p system/bin dev proc sys  # Fallback to minimal structure
+            }
+          elif [[ "$FILE_TYPE" == *"gzip"* ]]; then
+            echo "Detected gzip compression, using gzip to decompress..."
+            gzip -dc ../default-ramdisk.img | cpio -idm 2>/dev/null || {
+              echo "⚠️ Failed to extract ramdisk with gzip"
+              mkdir -p system/bin dev proc sys  # Fallback to minimal structure
+            }
+          else
+            echo "⚠️ Unknown compression type: $FILE_TYPE"
+            mkdir -p system/bin dev proc sys  # Fallback
+          fi
         fi
         mkdir -p lib/modules
         if [ -d ../kernel-extracted/lib/modules ]; then
@@ -243,8 +255,11 @@ jobs:
           find lib/modules -name "*.ko" -exec ls -lh {} \;
           MODULE_COUNT=$(find lib/modules -name "*.ko" | wc -l)
           echo "✅ Copied $MODULE_COUNT modules to ramdisk"
+          # Ensure module permissions
+          find lib/modules -type d -exec chmod 755 {} \;
+          find lib/modules -type f -name "*.ko" -exec chmod 644 {} \;
         else
-          echo "⚠️  No modules found to copy"
+          echo "⚠️ No modules found to copy"
         fi
         echo "=== Creating init wrapper ==="
         if [ -f init ] && [ ! -f init.original ]; then
@@ -288,16 +303,15 @@ jobs:
         fi
         EOFMARKER
         chmod +x init
-        find lib/modules -type f -name "*.ko" -exec chmod 644 {} \;
-        echo "=== Creating new ramdisk image ==="
-        find . | cpio -o -H newc 2>/dev/null | gzip -9 > ../custom-ramdisk.img
+        echo "=== Creating new ramdisk image with LZ4 ==="
+        find . | cpio -o -H newc 2>/dev/null | lz4 -c -l -9 > ../custom-ramdisk.img
         cd ..
-        echo "✅ Custom ramdisk created"
+        echo "✅ Custom ramdisk created with LZ4"
         ls -lh custom-ramdisk.img
         echo "=== Verifying ramdisk contents ==="
         mkdir -p ramdisk-verify
         cd ramdisk-verify
-        gzip -dc ../custom-ramdisk.img | cpio -t 2>/dev/null | grep -E "(init|\.ko)" | head -20
+        lz4 -d -c ../custom-ramdisk.img | cpio -t 2>/dev/null | grep -E "(init|\.ko)" | head -20
         cd ..
 
     - name: Run emulator with custom kernel and modules
