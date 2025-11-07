@@ -80,45 +80,45 @@ jobs:
       continue-on-error: true
 
     - name: Build kernel with modules built-in
-  run: |
-    cd ${{ github.workspace }}/kernel-src
-    echo "=== Configuring kernel to build all modules in (disable loadable modules) ==="
+      run: |
+       cd ${{ github.workspace }}/kernel-src
+       echo "=== Configuring kernel to build all modules in (disable loadable modules) ==="
     
-    # 方法1: 直接修改配置文件（如果存在）
-    CONFIG_FILE="common-modules/virtual-device/configs/virtual_device_x86_64.config"
-    if [ -f "$CONFIG_FILE" ]; then
-      echo "📝 Modifying config file: $CONFIG_FILE"
-      # 禁用模块支持，强制所有驱动内置
-      sed -i 's/CONFIG_MODULES=y/# CONFIG_MODULES is not set/' "$CONFIG_FILE"
-      echo "# CONFIG_MODULES is not set" >> "$CONFIG_FILE"
-      echo "✅ Config file modified"
-    else
-      echo "⚠️  Config file not found at $CONFIG_FILE, trying alternative locations"
-      # 查找其他可能的配置文件
-      find . -name "*.config" -type f | grep -i virtual | head -5
-    fi
+       # 方法1: 直接修改配置文件（如果存在）
+       CONFIG_FILE="common-modules/virtual-device/configs/virtual_device_x86_64.config"
+       if [ -f "$CONFIG_FILE" ]; then
+         echo "📝 Modifying config file: $CONFIG_FILE"
+         # 禁用模块支持，强制所有驱动内置
+         sed -i 's/CONFIG_MODULES=y/# CONFIG_MODULES is not set/' "$CONFIG_FILE"
+         echo "# CONFIG_MODULES is not set" >> "$CONFIG_FILE"
+         echo "✅ Config file modified"
+       else
+         echo "⚠️  Config file not found at $CONFIG_FILE, trying alternative locations"
+         # 查找其他可能的配置文件
+         find . -name "*.config" -type f | grep -i virtual | head -5
+       fi
     
-    # 方法2: 在构建时通过环境变量覆盖配置
-    export KCONFIG_ALLCONFIG=1
-    export KCONFIG_OVERRIDES="CONFIG_MODULES=n"
+       # 方法2: 在构建时通过环境变量覆盖配置
+       export KCONFIG_ALLCONFIG=1
+       export KCONFIG_OVERRIDES="CONFIG_MODULES=n"
+     
+        echo "=== Building kernel with built-in modules ==="
+       tools/bazel run --config=fast --lto=none //common-modules/virtual-device:virtual_device_x86_64_dist
     
-    echo "=== Building kernel with built-in modules ==="
-    tools/bazel run --config=fast --lto=none //common-modules/virtual-device:virtual_device_x86_64_dist
-    
-    # 如果上面的方法失败，尝试传统make方式
-    if [ $? -ne 0 ]; then
-      echo "🔄 Bazel build failed, trying alternative build method..."
-      # 切换到内核源码目录
-      cd common
-      # 使用传统方式配置和构建
-      make virtual_device_x86_64_defconfig
-      scripts/config --disable MODULES
-      make olddefconfig
-      make -j$(nproc)
-      echo "✅ Kernel built with traditional method"
-    else
-      echo "✅ Kernel build completed (with built-in modules)"
-    fi
+       # 如果上面的方法失败，尝试传统make方式
+       if [ $? -ne 0 ]; then
+         echo "🔄 Bazel build failed, trying alternative build method..."
+         # 切换到内核源码目录
+         cd common
+         # 使用传统方式配置和构建
+         make virtual_device_x86_64_defconfig
+         scripts/config --disable MODULES
+         make olddefconfig
+         make -j$(nproc)
+         echo "✅ Kernel built with traditional method"
+       else
+         echo "✅ Kernel build completed (with built-in modules)"
+       fi
 
     - name: Set artifact name
       id: set-artifact-name
