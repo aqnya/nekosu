@@ -52,7 +52,7 @@ apply_version_patches() {
         PATCHFILES+=("$file")
     done < <(find "$PATCH_DIR" -maxdepth 1 -name "${MAJOR}.${MINOR}*.patch" -print0 | sort -z -V)
     
-    $FMAC_ROOT_DIR/script/5.15mkdirat.py fs/namei.c
+    $FMAC_ROOT_DIR/scripts/5.15mkdirat.py fs/namei.c
 
     if [[ ${#PATCHFILES[@]} -gt 0 ]]; then
         print_info "Found ${#PATCHFILES[@]} patch files for kernel $MAJOR.$MINOR"
