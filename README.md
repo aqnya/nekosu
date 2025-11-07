@@ -1,39 +1,71 @@
-<div align="center">
-
-![Nekosu](https://socialify.git.ci/bug-bit/Nekosu/image?description=1&font=Inter&forks=1&language=1&name=1&owner=1&stargazers=1&theme=Auto)
-
 # Nekosu
 
-[![license](https://img.shields.io/github/license/bug-bit/Nekosu.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
-[![Stars](https://img.shields.io/github/stars/bug-bit/Nekosu?label=stars)](https://github.com/bug-bit/Nekosu)
-<a href="https://github.com/bug-bit/Nekosu/releases"><img alt="GitHub all releases" src="https://img.shields.io/github/downloads/bug-bit/Nekosu/total?label=Downloads"></a>
-[![GitHub Release](https://img.shields.io/github/v/release/bug-bit/Nekosu)](https://github.com/bug-bit/Nekosu/releases)
-<a href="https://github.com/bug-bit/Nekosu/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/bug-bit/Nekosu"></a>
+Nekosu is a project for Android that integrates a powerful kernel-level module with a user-friendly manager application. It aims to provide advanced access control and system modification capabilities.
 
-一个简单、高效、易用的打飞机记录工具，帮助你科学管理✈️生活
+## Components
 
-</div>
+The project consists of two main components:
 
----
+### 1. FMAC (File Monitoring and Access Control)
 
-## 说明
-> 在 GitHub 点击 ⭐ Star 以支持我在空余时间继续开发
-> 祝愿所有给本项目Star的小伙伴牛子长度翻倍！
-  
-- 本项目参考了以下开源项目：
-- [DickHelper](https://github.com/zzzdajb/DickHelper)
+FMAC is a Linux kernel module that provides fine-grained file access control based on file paths, user IDs (UIDs), and operation types (e.g., `mkdirat`, `openat`). It forms the core of the Nekosu project, enabling its system-level features.
 
+**Features:**
 
-## 贡献
-欢迎提交 issue 或 pull request 以改进本项目。
+*   **Path-based Access Control**: Restrict access to specific file paths or prefixes.
+*   **UID-based Restrictions**: Apply rules to specific users.
+*   **Operation Type Matching**: Control specific filesystem operations.
+*   **Procfs Interface**: Manage rules and view logs via `/proc/fmac`.
+*   **Root capabilities**: Provides mechanisms for privilege escalation.
 
----
+The kernel module source code is located in the `src/` directory.
 
-## Star History
+### 2. Nekosu (Android Application)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=bug-bit/Nekosu&type=Timeline)](https://star-history.com/#bug-bit/Nekosu&Timeline)
+NzHelper is the official Android manager application for Nekosu. It is located in the `app/` submodule.
 
-## 许可协议
+The application provides:
+*   An interface to manage the Nekosu environment (under development).
+*   System utilities like a logcat viewer and an application list.
+*   A personal activity logging feature to help you "scientifically manage your life".
 
-本项目基于 GNU 通用公共许可证 第3版（GPLv3）进行授权。  
-详情请查阅 [LICENSE](LICENSE) 文件。
+## Building
+
+### Building FMAC (Kernel Module)
+
+To build and integrate the FMAC kernel module, you need a Linux kernel source tree for your target Android device.
+
+1.  Place the `nekosu` project directory in your filesystem.
+2.  Run the patch script from within the kernel source directory:
+    ```bash
+    /path/to/nekosu/scripts/patch.sh
+    ```
+3.  The script will copy the module source and apply the necessary patches to the kernel.
+4.  Configure your kernel build (`make menuconfig`) and enable `Device Drivers -> FMAC`.
+5.  Build your kernel as usual.
+
+### Building NzHelper (Android App)
+
+The NzHelper application can be built using Gradle.
+
+1.  Navigate to the `app` directory:
+    ```bash
+    cd app/
+    ```
+2.  Initialize the submodule if you haven't:
+    ```bash
+    git submodule update --init
+    ```
+3.  Build the APK using the Gradle wrapper:
+    ```bash
+    ./gradlew assembleDebug
+    ```
+    The output APK will be in `app/build/outputs/apk/debug/`.
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please submit pull requests or open issues to improve the project.

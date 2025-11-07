@@ -1,0 +1,24 @@
+menu "FMAC"
+
+config FMAC
+	tristate "File Monitoring and Access"
+	depends on OVERLAY_FS
+	default y
+	help
+	  Enable kernel-level File Monitoring and Access
+
+config FMAC_DEBUG
+	bool "FMAC debug mode"
+	depends on FMAC
+	default y
+	help
+	  Enable FMAC debug mode.
+	  
+config FMAC_ROOT
+	bool "FMAC ROOT feature"
+	depends on FMAC
+	default y
+	help
+	  Enable FMAC root feature.
+
+endmenu

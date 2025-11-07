@@ -20,6 +20,7 @@ jobs:
         java-version: '21'
     - name: Build with Gradle
       run: |
+          cd app/
           echo "BUILD_TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")" >> $GITHUB_ENV
           {
             echo 'org.gradle.parallel=true'
