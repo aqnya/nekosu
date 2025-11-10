@@ -128,7 +128,7 @@ fun FileBrowser() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (file.isDirectory) Icons.Default.Folder else Icons.Default.Description,
+                            imageVector = if (file.isDirectory) Folder else Description,
                             contentDescription = null,
                             modifier = Modifier.padding(end = 16.dp)
                         )
