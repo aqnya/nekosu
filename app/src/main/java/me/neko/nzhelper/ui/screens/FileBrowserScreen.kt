@@ -16,8 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -128,7 +126,7 @@ fun FileBrowser() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (file.isDirectory) Folder else Description,
+                            imageVector = if (file.isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
                             contentDescription = null,
                             modifier = Modifier.padding(end = 16.dp)
                         )
