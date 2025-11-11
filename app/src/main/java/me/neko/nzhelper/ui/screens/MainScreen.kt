@@ -5,19 +5,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,15 +21,22 @@ import com.google.accompanist.permissions.shouldShowRationale
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-val (hasPermission, setHasPermission) = remember {
-    mutableStateOf(checkStoragePermission(context))
-}
+    val (hasPermission, setHasPermission) = remember {
+        mutableStateOf(checkStoragePermission(context))
+    }
 
-LaunchedEffect(Unit) {
-    setHasPermission(checkStoragePermission(context))
-}
+    LaunchedEffect(Unit) {
+        setHasPermission(checkStoragePermission(context))
+    }
 
-    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { innerPadding ->
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("NZHelper") }
+            )
+        }
+    ) { innerPadding ->
         if (hasPermission) {
             // ✅ 已获得权限，进入主界面
             FileBrowserScreen()
@@ -53,6 +50,7 @@ LaunchedEffect(Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("The app needs storage permission to function properly.")
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
@@ -79,8 +77,10 @@ private fun checkStoragePermission(context: android.content.Context): Boolean {
         Environment.isExternalStorageManager()
     } else {
         val permission = android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-        androidx.core.content.ContextCompat.checkSelfPermission(context, permission) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 }
 
