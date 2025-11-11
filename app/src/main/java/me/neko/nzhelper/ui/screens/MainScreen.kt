@@ -27,81 +27,63 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val storagePermissionState = rememberPermissionState(
-        permission = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE
-    )
-    val (permissionAlreadyRequested, setPermissionAlreadyRequested) = remember {
-        mutableStateOf(false)
+    val (hasPermission, setHasPermission) = remember {
+        mutableStateOf(checkStoragePermission())
     }
-    LaunchedEffect(storagePermissionState) {
-        if (permissionAlreadyRequested && !storagePermissionState.status.isGranted) {
-            // The user has denied the permission and we've already shown the rationale
-            // You can show a dialog or a snackbar to inform the user that the permission is required
-        }
+
+    LaunchedEffect(Unit) {
+        // 每次进入时重新检查权限状态
+        setHasPermission(checkStoragePermission())
     }
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { innerPadding ->
-        if (storagePermissionState.status.isGranted) {
+
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { innerPadding ->
+        if (hasPermission) {
+            // ✅ 已获得权限，进入主界面
             FileBrowserScreen()
         } else {
-            if (storagePermissionState.status.shouldShowRationale) {
-                // If the user has denied the permission but the rationale can be shown,
-                // then gently explain why the app needs this permission
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("The app needs storage permission to function properly.")
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                            val uri = Uri.fromParts("package", context.packageName, null)
-                            intent.data = uri
-                            context.startActivity(intent)
-                        } else {
-                            storagePermissionState.launchPermissionRequest()
-                        }
-                        setPermissionAlreadyRequested(true)
-                    }) {
-                        Text("Request Permission")
+            // ❌ 未获得权限，请求
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("The app needs storage permission to function properly.")
+                Button(onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        val uri = Uri.fromParts("package", context.packageName, null)
+                        intent.data = uri
+                        context.startActivity(intent)
+                    } else {
+                        // Android 10 及以下走普通权限
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        val uri = Uri.fromParts("package", context.packageName, null)
+                        intent.data = uri
+                        context.startActivity(intent)
                     }
-                }
-            } else {
-                // If it's the first time the user is seeing the permission request,
-                // or the user has permanently denied the permission,
-                // then ask for the permission
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("The app needs storage permission to function properly.")
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-                            val uri = Uri.fromParts("package", context.packageName, null)
-                            intent.data = uri
-                            context.startActivity(intent)
-                        } else {
-                            storagePermissionState.launchPermissionRequest()
-                        }
-                        setPermissionAlreadyRequested(true)
-                    }) {
-                        Text("Request Permission")
-                    }
+                }) {
+                    Text("Request Permission")
                 }
             }
         }
+    }
+}
+
+private fun checkStoragePermission(): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Environment.isExternalStorageManager()
+    } else {
+        // 对旧版本使用 READ/WRITE_EXTERNAL_STORAGE 检查
+        val permission = android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        val context = androidx.compose.ui.platform.LocalContext.current
+        androidx.core.content.ContextCompat.checkSelfPermission(context, permission) ==
+                android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 }
 
