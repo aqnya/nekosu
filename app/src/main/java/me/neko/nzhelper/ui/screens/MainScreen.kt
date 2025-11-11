@@ -31,14 +31,13 @@ import com.google.accompanist.permissions.shouldShowRationale
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
-    val (hasPermission, setHasPermission) = remember {
-        mutableStateOf(checkStoragePermission())
-    }
+val (hasPermission, setHasPermission) = remember {
+    mutableStateOf(checkStoragePermission(context))
+}
 
-    LaunchedEffect(Unit) {
-        // 每次进入时重新检查权限状态
-        setHasPermission(checkStoragePermission())
-    }
+LaunchedEffect(Unit) {
+    setHasPermission(checkStoragePermission(context))
+}
 
     Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0)) { innerPadding ->
         if (hasPermission) {
@@ -75,14 +74,11 @@ fun MainScreen() {
     }
 }
 
-@Composable
-private fun checkStoragePermission(): Boolean {
+private fun checkStoragePermission(context: android.content.Context): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         Environment.isExternalStorageManager()
     } else {
-        // 对旧版本使用 READ/WRITE_EXTERNAL_STORAGE 检查
         val permission = android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-        val context = androidx.compose.ui.platform.LocalContext.current
         androidx.core.content.ContextCompat.checkSelfPermission(context, permission) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
     }
