@@ -75,6 +75,7 @@ fun MainScreen() {
     }
 }
 
+@Composable
 private fun checkStoragePermission(): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         Environment.isExternalStorageManager()
