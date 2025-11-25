@@ -50,8 +50,8 @@ jobs:
 
       - name: Package LLVM for Termux
         run: |
-          cd $PREFIX
-          tar -czf llvm-termux.tar.gz *
+          cd -
+          tar -czf llvm-termux.tar.gz build
           ls -lh llvm-termux.tar.gz
 
       - name: Upload project
