@@ -33,15 +33,15 @@ jobs:
         run: |
           mkdir -p build && cd build
           cmake -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=${PREFIX} \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;compiler-rt;libcxx;libcxxabi" \
-            -DLLVM_TARGETS_TO_BUILD="AArch64;X86;ARM" \
-            -DLLVM_ENABLE_LTO=OFF \
-            -DLLVM_ENABLE_RTTI=ON \
-            -DLLVM_ENABLE_EH=ON \
-            -DLLVM_ENABLE_LIBCXX=ON \
-            ../llvm-project/llvm
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=/data/data/com.termux/files/usr/ \
+          -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt" \
+          -DLLVM_TARGETS_TO_BUILD="AArch64;X86;ARM" \
+          -DLLVM_ENABLE_LTO=OFF \
+          -DLLVM_ENABLE_RTTI=ON \
+          -DLLVM_ENABLE_EH=ON \
+          ../llvm-project/llvm
 
       - name: Build and install
         run: |
