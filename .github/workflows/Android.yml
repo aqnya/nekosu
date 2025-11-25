@@ -36,8 +36,12 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX=/data/data/com.termux/files/usr/ \
           -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt" \
+          -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-android \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_TARGETS_TO_BUILD="AArch64;X86;ARM" \
+          -DLIBCXX_USE_COMPILER_RT=ON \
+          -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+          -DLIBUNWIND_USE_COMPILER_RT=ON \
           -DLLVM_ENABLE_LTO=OFF \
           -DLLVM_ENABLE_RTTI=ON \
           -DLLVM_ENABLE_EH=ON \
