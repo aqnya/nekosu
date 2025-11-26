@@ -15,8 +15,8 @@ jobs:
       LLVM_VERSION: llvmorg-18.1.8
       TARGET: aarch64-linux-android
       API: 24
-      PREFIX: ${{ github.workspace }}/llvm-install
       JOBS: 8
+      INSTALL_PREFIX: /data/data/com.termux/files/usr
 
     steps:
       - name: Checkout
@@ -38,45 +38,61 @@ jobs:
           cd $HOME
           git clone --depth 1 --branch ${LLVM_VERSION} https://github.com/llvm/llvm-project.git llvm-project
 
-      - name: Configure (CMake)
+      #######################################################################
+      # STEP 1: Build LLVM/Clang host tools (用于之后构建 runtimes)
+      #######################################################################
+      - name: Build LLVM/Clang (host tools)
         run: |
           cd $HOME
-          mkdir build && cd build
+          mkdir build-host && cd build-host
 
+          cmake -G Ninja ../llvm-project/llvm \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
+            -DLLVM_TARGETS_TO_BUILD="AArch64" \
+            -DCMAKE_INSTALL_PREFIX=$HOME/llvm-host
+
+          ninja -j${JOBS}
+          ninja install
+
+      #######################################################################
+      # STEP 2: Build runtimes ONLY for Android
+      #######################################################################
+      - name: Build libcxx/libcxxabi/libunwind/compiler-rt for Android
+        run: |
           TOOLCHAIN=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64
           SYSROOT=$TOOLCHAIN/sysroot
 
-          cmake -G Ninja \
+          cd $HOME
+          mkdir build-runtimes && cd build-runtimes
+
+          cmake -G Ninja ../llvm-project/runtimes \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/llvm-host/lib/cmake/llvm/Android.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=/data/data/com.termux/files/usr/ \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
-            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
-            -DLLVM_TARGETS_TO_BUILD=AArch64 \
-            -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET}${API} \
+            -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
             -DCMAKE_SYSROOT=$SYSROOT \
+            -DLLVM_ENABLE_RUNTIMES="libunwind;libcxxabi;libcxx;compiler-rt" \
+            -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+            -DLIBUNWIND_ENABLE_STATIC=ON \
+            -DLIBUNWIND_ENABLE_SHARED=OFF \
             -DCMAKE_SYSTEM_NAME=Android \
             -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
             -DCMAKE_ANDROID_NDK=$HOME/ndk \
-            -DCMAKE_ANDROID_STL_TYPE=c++_static \
+            -DCMAKE_ANDROID_API=${API} \
             -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang \
             -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang++ \
-            -DCMAKE_ASM_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang \
-            -DLIBUNWIND_ENABLE_STATIC=ON \
-            -DLIBUNWIND_ENABLE_SHARED=OFF \
-            -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-            -DLIBUNWIND_USE_COMPILER_RT=ON \
-            -DLIBCXX_USE_COMPILER_RT=ON \
-            ../llvm-project/llvm
+            -DCMAKE_ASM_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang
 
-      - name: Build LLVM
-        run: |
-          cd $HOME/build
           ninja -j${JOBS}
+          ninja install
 
+      #######################################################################
+      # PACKAGE
+      #######################################################################
       - name: Package
         run: |
           cd $HOME
-          tar -czf llvm-termux.tar.gz build
+          tar -czf llvm-termux.tar.gz llvm-host build-runtimes
           ls -lh llvm-termux.tar.gz
 
       - name: Upload Artifact
