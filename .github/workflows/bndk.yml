@@ -35,7 +35,7 @@ jobs:
           chmod a+x ~/.local/bin/repo
           
           repo init -u https://android.googlesource.com/platform/manifest -b master-ndk --partial-clone
-          repo sync -c -j4
+          repo sync -c -j8
           
       # 4. 配置 Python 环境 (根据文档要求使用预构建 Python)
       - name: Configure Poetry Virtual Environment
