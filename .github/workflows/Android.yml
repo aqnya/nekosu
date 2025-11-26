@@ -1,4 +1,4 @@
-name: Build LLVM for Termux
+name: Build LLVM for Termux (NDK)
 
 on:
   push:
@@ -7,62 +7,83 @@ on:
 
 jobs:
   build:
-    name: Build LLVM/Clang for Termux
+    name: Build LLVM/Clang for Termux (aarch64)
     runs-on: ubuntu-latest
 
     env:
+      NDK_VERSION: 26.1.10909125
+      LLVM_VERSION: llvmorg-18.1.8
+      TARGET: aarch64-linux-android
+      API: 24
       PREFIX: ${{ github.workspace }}/llvm-install
-      NPROC: 8
+      JOBS: 8
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git cmake ninja-build build-essential python3 python3-pip wget curl
+          sudo apt-get install -y git cmake ninja-build python3 build-essential wget
 
-      - name: Download LLVM source
+      - name: Download NDK
         run: |
-          mkdir -p llvm-project
-          cd llvm-project
-          git clone --depth 1 --branch llvmorg-18.1.8 https://github.com/llvm/llvm-project.git .
+          wget https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip
+          unzip -q android-ndk-${NDK_VERSION}-linux.zip
+          mv android-ndk-${NDK_VERSION} $HOME/ndk
 
-      - name: Configure LLVM with CMake
+      - name: Download LLVM Source
         run: |
-          mkdir -p build && cd build
+          git clone --depth 1 --branch ${LLVM_VERSION} https://github.com/llvm/llvm-project.git llvm-project
+
+      - name: Configure (CMake)
+        run: |
+          mkdir build && cd build
+
+          TOOLCHAIN=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64
+          SYSROOT=$TOOLCHAIN/sysroot
+
           cmake -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_INSTALL_PREFIX=/data/data/com.termux/files/usr/ \
-          -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
-          -DLLVM_DEFAULT_TARGET_TRIPLE=aarch64-linux-android \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
-          -DLLVM_TARGETS_TO_BUILD="AArch64;X86;ARM" \
-          -DLIBCXX_USE_COMPILER_RT=ON \
-          -DLIBUNWIND_ENABLE_SHARED=OFF \
-          -DLIBUNWIND_ENABLE_STATIC=ON \
-          -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-          -DLIBUNWIND_USE_COMPILER_RT=ON
-          -DLLVM_ENABLE_LTO=OFF \
-          -DLLVM_ENABLE_RTTI=ON \
-          -DLLVM_ENABLE_EH=ON \
-          ../llvm-project/llvm
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=$PREFIX \
+            -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
+            -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
+            -DLLVM_TARGETS_TO_BUILD=AArch64 \
+            -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET}${API} \
+            -DCMAKE_SYSROOT=$SYSROOT \
+            -DCMAKE_SYSTEM_NAME=Android \
+            -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
+            -DCMAKE_ANDROID_NDK=$HOME/ndk \
+            -DCMAKE_ANDROID_STL_TYPE=c++_static \
+            -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang \
+            -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang++ \
+            -DCMAKE_ASM_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang \
+            -DLIBUNWIND_ENABLE_STATIC=ON \
+            -DLIBUNWIND_ENABLE_SHARED=OFF \
+            -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
+            -DLIBUNWIND_USE_COMPILER_RT=ON \
+            -DLIBCXX_USE_COMPILER_RT=ON \
+            ../llvm-project/llvm
 
-      - name: Build and install
+      - name: Build LLVM
         run: |
           cd build
-          ninja -j${NPROC}
+          ninja -j${JOBS}
 
-      - name: Package LLVM for Termux
+      - name: Install LLVM
         run: |
-          cd -
-          tar -czf llvm-termux.tar.gz build
+          cd build
+          ninja install
+
+      - name: Package
+        run: |
+          cd ${PREFIX}/..
+          tar -czf llvm-termux.tar.gz llvm-install
           ls -lh llvm-termux.tar.gz
 
-      - name: Upload project
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: llvm-termux
           path: llvm-termux.tar.gz
- 
