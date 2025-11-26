@@ -1,4 +1,4 @@
-name: Build NDK Runtimes for Android (Self-Hosted NDK Bootstrap)
+name: Build AOSP NDK (master-ndk)
 
 on:
   workflow_dispatch:
@@ -10,70 +10,63 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      # 用于交叉构建目标 Android (arm64)
-      TARGET: aarch64-linux-android
-      API: 24
-      JOBS: 8
-
-      # 指定你用来 bootstrap 的 NDK 版本
-      BOOTSTRAP_NDK_VERSION: 26.1.10909125
+      REPO_URL: https://android.googlesource.com/platform/manifest
+      REPO_BRANCH: master-ndk
+      PYTHON_PREBUILT: prebuilts/python/linux-x86/bin/python3
 
     steps:
-      - name: Checkout source
+      - name: Checkout self
         uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y build-essential ninja-build python3 git curl unzip cmake
+          sudo apt install -y git-core curl python3 python3-pip unzip \
+            openjdk-17-jdk build-essential ninja-build ccache rsync \
+            python3-venv python3-distutils python3-setuptools
 
-      - name: Download bootstrap NDK
+          # install repo tool
+          mkdir -p ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod +x ~/bin/repo
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Repo init NDK source
         run: |
-          mkdir $HOME/ndk
-          cd $HOME/ndk
-          curl -O https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
-          unzip android-ndk-r26b-linux.zip
-          mv android-ndk-r26b ndk
-          echo "BOOTSTRAP_NDK=$HOME/ndk/ndk" >> $GITHUB_ENV
+          mkdir ndk-src
+          cd ndk-src
+          repo init -u $REPO_URL -b $REPO_BRANCH --partial-clone
+          repo sync -c -j8 --no-tags --no-clone-bundle
 
-      - name: Prepare toolchain paths
+      - name: Setup Poetry
         run: |
-          TOOLCHAIN=$BOOTSTRAP_NDK/toolchains/llvm/prebuilt/linux-x86_64
-          echo "TOOLCHAIN=$TOOLCHAIN" >> $GITHUB_ENV
-          echo "SYSROOT=$TOOLCHAIN/sysroot" >> $GITHUB_ENV
-          echo "CC=$TOOLCHAIN/bin/${TARGET}${API}-clang" >> $GITHUB_ENV
-          echo "CXX=$TOOLCHAIN/bin/${TARGET}${API}-clang++" >> $GITHUB_ENV
+          pip install --upgrade pip
+          pip install poetry
 
-      - name: Checkout LLVM/NDK runtimes source
+      - name: Setup Python environment for NDK (Poetry)
+        working-directory: ndk-src/ndk
         run: |
-          git clone --depth=1 https://github.com/llvm/llvm-project.git llvm-project
+          poetry env use ../$PYTHON_PREBUILT
+          poetry install
 
-      - name: Build Android runtimes using NDK
+      - name: Build NDK
+        working-directory: ndk-src/ndk
         run: |
-          mkdir build-runtimes
-          cd build-runtimes
+          # enable poetry virtualenv
+          source $(poetry env info --path)/bin/activate
 
-          cmake -G Ninja ../llvm-project/runtimes \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=$HOME/ndk-out \
-            -DCMAKE_SYSROOT=$SYSROOT \
-            -DLLVM_ENABLE_RUNTIMES="libunwind;libcxxabi;libcxx;compiler-rt" \
-            -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-            -DLIBUNWIND_ENABLE_STATIC=ON \
-            -DLIBUNWIND_ENABLE_SHARED=OFF \
-            -DCMAKE_SYSTEM_NAME=Android \
-            -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-            -DCMAKE_ANDROID_NDK=$BOOTSTRAP_NDK \
-            -DCMAKE_ANDROID_API=$API \
-            -DCMAKE_C_COMPILER=$CC \
-            -DCMAKE_CXX_COMPILER=$CXX \
-            -DCMAKE_ASM_COMPILER=$CC
+          # build NDK (no packaging to save time)
+          python checkbuild.py --no-build-tests --permissive-python-environment
 
-          ninja -j${JOBS}
-          ninja install
+      - name: Package NDK (optional)
+        if: ${{ github.event.inputs.package == 'true' }}
+        working-directory: ndk-src/ndk
+        run: |
+          source $(poetry env info --path)/bin/activate
+          python checkbuild.py --package --permissive-python-environment
 
-      - name: Upload NDK runtime outputs
+      - name: Archive build output
         uses: actions/upload-artifact@v4
         with:
-          name: ndk-android-runtimes
-          path: $HOME/ndk-out
+          name: ndk-out
+          path: ndk-src/out/dist
