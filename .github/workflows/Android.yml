@@ -29,9 +29,9 @@ jobs:
 
       - name: Download NDK
         run: |
-          wget https://googledownloads.cn/android/repository/android-ndk-r27d-linux.zip
-          unzip -q android-ndk-${NDK_VERSION}-linux.zip
-          mv android-ndk-${NDK_VERSION} $HOME/ndk
+          wget https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          unzip -q android-ndk-r27d-linux.zip
+          mv android-ndk-r27d $HOME/ndk
 
       - name: Download LLVM Source
         run: |
