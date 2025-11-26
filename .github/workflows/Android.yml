@@ -39,6 +39,7 @@ jobs:
 
       - name: Configure (CMake)
         run: |
+          cd $HOME
           mkdir build && cd build
 
           TOOLCHAIN=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64
@@ -46,7 +47,7 @@ jobs:
 
           cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=$PREFIX \
+            -DCMAKE_INSTALL_PREFIX=/data/data/com.termux/files/usr/ \
             -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
             -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
             -DLLVM_TARGETS_TO_BUILD=AArch64 \
@@ -68,18 +69,13 @@ jobs:
 
       - name: Build LLVM
         run: |
-          cd build
+          cd $HOME/build
           ninja -j${JOBS}
-
-      - name: Install LLVM
-        run: |
-          cd build
-          ninja install
 
       - name: Package
         run: |
-          cd ${PREFIX}/..
-          tar -czf llvm-termux.tar.gz llvm-install
+          cd $HOME
+          tar -czf llvm-termux.tar.gz build
           ls -lh llvm-termux.tar.gz
 
       - name: Upload Artifact
