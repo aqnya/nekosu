@@ -1,75 +1,61 @@
-name: Build LLVM for Termux (NDK)
+name: Build NDK Runtimes for Android (Self-Hosted NDK Bootstrap)
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
-    name: Build LLVM/Clang for Termux (aarch64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     env:
-      NDK_VERSION: 26.1.10909125
-      LLVM_VERSION: llvmorg-18.1.8
+      # 用于交叉构建目标 Android (arm64)
       TARGET: aarch64-linux-android
       API: 24
       JOBS: 8
-      INSTALL_PREFIX: /data/data/com.termux/files/usr
+
+      # 指定你用来 bootstrap 的 NDK 版本
+      BOOTSTRAP_NDK_VERSION: 26.1.10909125
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git cmake ninja-build python3 build-essential wget
+          sudo apt update
+          sudo apt install -y build-essential ninja-build python3 git curl unzip cmake
 
-      - name: Download NDK
+      - name: Download bootstrap NDK
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
-          unzip -q android-ndk-r27d-linux.zip
-          mv android-ndk-r27d $HOME/ndk
+          mkdir $HOME/ndk
+          cd $HOME/ndk
+          curl -O https://dl.google.com/android/repository/android-ndk-r${BOOTSTRAP_NDK_VERSION}-linux.zip
+          unzip android-ndk-r${BOOTSTRAP_NDK_VERSION}-linux.zip
+          mv android-ndk-r* ndk
+          echo "BOOTSTRAP_NDK=$HOME/ndk/ndk" >> $GITHUB_ENV
 
-      - name: Download LLVM Source
+      - name: Prepare toolchain paths
         run: |
-          cd $HOME
-          git clone --depth 1 --branch ${LLVM_VERSION} https://github.com/llvm/llvm-project.git llvm-project
+          TOOLCHAIN=$BOOTSTRAP_NDK/toolchains/llvm/prebuilt/linux-x86_64
+          echo "TOOLCHAIN=$TOOLCHAIN" >> $GITHUB_ENV
+          echo "SYSROOT=$TOOLCHAIN/sysroot" >> $GITHUB_ENV
+          echo "CC=$TOOLCHAIN/bin/${TARGET}${API}-clang" >> $GITHUB_ENV
+          echo "CXX=$TOOLCHAIN/bin/${TARGET}${API}-clang++" >> $GITHUB_ENV
 
-      #######################################################################
-      # STEP 1: Build LLVM/Clang host tools (用于之后构建 runtimes)
-      #######################################################################
-      - name: Build LLVM/Clang (host tools)
+      - name: Checkout LLVM/NDK runtimes source
         run: |
-          cd $HOME
-          mkdir build-host && cd build-host
+          git clone --depth=1 https://github.com/llvm/llvm-project.git llvm-project
 
-          cmake -G Ninja ../llvm-project/llvm \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLLVM_ENABLE_PROJECTS="clang;lld;clang-tools-extra" \
-            -DLLVM_TARGETS_TO_BUILD="AArch64" \
-            -DCMAKE_INSTALL_PREFIX=$HOME/llvm-host
-
-          ninja -j${JOBS}
-          ninja install
-
-      #######################################################################
-      # STEP 2: Build runtimes ONLY for Android
-      #######################################################################
-      - name: Build libcxx/libcxxabi/libunwind/compiler-rt for Android
+      - name: Build Android runtimes using NDK
         run: |
-          TOOLCHAIN=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64
-          SYSROOT=$TOOLCHAIN/sysroot
-
-          cd $HOME
-          mkdir build-runtimes && cd build-runtimes
+          mkdir build-runtimes
+          cd build-runtimes
 
           cmake -G Ninja ../llvm-project/runtimes \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/llvm-host/lib/cmake/llvm/Android.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+            -DCMAKE_INSTALL_PREFIX=$HOME/ndk-out \
             -DCMAKE_SYSROOT=$SYSROOT \
             -DLLVM_ENABLE_RUNTIMES="libunwind;libcxxabi;libcxx;compiler-rt" \
             -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
@@ -77,26 +63,17 @@ jobs:
             -DLIBUNWIND_ENABLE_SHARED=OFF \
             -DCMAKE_SYSTEM_NAME=Android \
             -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-            -DCMAKE_ANDROID_NDK=$HOME/ndk \
-            -DCMAKE_ANDROID_API=${API} \
-            -DCMAKE_C_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang \
-            -DCMAKE_CXX_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang++ \
-            -DCMAKE_ASM_COMPILER=$TOOLCHAIN/bin/${TARGET}${API}-clang
+            -DCMAKE_ANDROID_NDK=$BOOTSTRAP_NDK \
+            -DCMAKE_ANDROID_API=$API \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_ASM_COMPILER=$CC
 
           ninja -j${JOBS}
           ninja install
 
-      #######################################################################
-      # PACKAGE
-      #######################################################################
-      - name: Package
-        run: |
-          cd $HOME
-          tar -czf llvm-termux.tar.gz llvm-host build-runtimes
-          ls -lh llvm-termux.tar.gz
-
-      - name: Upload Artifact
+      - name: Upload NDK runtime outputs
         uses: actions/upload-artifact@v4
         with:
-          name: llvm-termux
-          path: llvm-termux.tar.gz
+          name: ndk-android-runtimes
+          path: $HOME/ndk-out
