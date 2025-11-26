@@ -1,0 +1,82 @@
+name: Build NDK (Non-Docker Host Build)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  host-build-ndk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180 
+
+    steps:
+      # 1. 安装核心系统依赖和交叉编译器
+      - name: Install System Dependencies and Cross-Compiler
+        run: |
+          sudo apt-get update
+          # 安装 AOSP 核心构建工具
+          sudo apt-get install -y build-essential git flex bison gperf curl openjdk-17-jdk python3-pip zip
+          # 安装 AArch64 交叉编译器 (用于构建 Host Toolchain)
+          sudo apt-get install -y g++-aarch64-linux-gnu 
+
+      # 2. 安装 Python 环境管理工具 Poetry
+      - name: Install Poetry
+        run: |
+          pip install poetry
+          # 将 poetry 添加到 PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          
+      # 3. NDK 源码初始化与同步
+      - name: Sync NDK Source
+        run: |
+          mkdir aosp-ndk
+          cd aosp-ndk
+          # 安装 repo 工具
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod a+x ~/.local/bin/repo
+          
+          repo init -u https://android.googlesource.com/platform/manifest -b master-ndk --partial-clone
+          repo sync -c -j4
+          
+      # 4. 配置 Python 环境 (根据文档要求使用预构建 Python)
+      - name: Configure Poetry Virtual Environment
+        working-directory: aosp-ndk/ndk
+        run: |
+          # 检查 prebuilts 路径是否存在
+          if [ ! -f "../prebuilts/python/linux-x86/bin/python3" ]; then
+            echo "Error: Prebuilt Python not found. Did repo sync complete fully?"
+            exit 1
+          fi
+          
+          # 根据文档要求使用 AOSP 预构建的 Python 3
+          poetry env use ../prebuilts/python/linux-x86/bin/python3
+          
+          # 安装 NDK 项目依赖
+          poetry install
+          
+      # 5. 执行 NDK 交叉编译
+      # 使用 poetry run 确保在正确的虚拟环境中执行 checkbuild.py
+      - name: Run NDK Cross-Compile Build (Linux AArch64)
+        working-directory: aosp-ndk/ndk
+        run: |
+          echo "Starting Host-Based Cross-Compile to Linux AArch64..."
+          
+          # 注入环境变量强制交叉编译
+          poetry run python3 checkbuild.py \
+            --package \
+            --no-build-tests \
+            --system linux \
+            --module toolchain \
+            --force-package
+        env:
+          CC: aarch64-linux-gnu-gcc
+          CXX: aarch64-linux-gnu-g++
+          HOST_ARCH: aarch64
+          TARGET_ARCH: aarch64
+          
+      # 6. 上传产物
+      - name: Upload NDK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-ndk-linux-aarch64-host-build
+          path: aosp-ndk/out/dist/*.zip
+          retention-days: 5
