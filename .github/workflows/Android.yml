@@ -1,72 +1,96 @@
-name: Build AOSP NDK (master-ndk)
+name: Build Android NDK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 允许手动触发构建（推荐，因为构建时间较长）
   push:
-    branches: [ main ]
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ndk-build.yml'
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
-
-    env:
-      REPO_URL: https://android.googlesource.com/platform/manifest
-      REPO_BRANCH: master-ndk
-      PYTHON_PREBUILT: prebuilts/python/linux-x86/bin/python3
+  build-ndk:
+    runs-on: ubuntu-latest
+    
+    # 增加超时时间，NDK 构建非常耗时
+    timeout-minutes: 360
 
     steps:
-      - name: Checkout self
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
+      # 1. 清理磁盘空间 (AOSP 构建必须步骤)
+      # GitHub Runner 默认空间有限，不清理极大可能会在 repo sync 阶段失败
+      - name: Free Disk Space
         run: |
-          sudo apt update
-          sudo apt install -y git-core curl python3 python3-pip unzip \
-            openjdk-17-jdk build-essential ninja-build ccache rsync \
-            python3-venv python3-distutils python3-setuptools
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo docker image prune --all --force
+          df -h
 
-          # install repo tool
-          mkdir -p ~/bin
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
-          chmod +x ~/bin/repo
-          echo "$HOME/bin" >> $GITHUB_PATH
-
-      - name: Repo init NDK source
+      # 2. 安装并配置 Repo 工具
+      - name: Install Repo Tool
         run: |
-          mkdir ndk-src
-          cd ndk-src
-          repo init -u $REPO_URL -b $REPO_BRANCH --partial-clone
-          repo sync -c -j8 --no-tags --no-clone-bundle
+          mkdir -p ~/.bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+          chmod a+x ~/.bin/repo
+          echo "$HOME/.bin" >> $GITHUB_PATH
+          
+          # 配置 Git 身份（Repo 工具需要）
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git config --global color.ui false
 
-      - name: Setup Poetry
+      # 3. 初始化并同步源码
+      # 使用 --partial-clone 和 -c (current branch) 最小化下载量
+      - name: Sync NDK Source (Master Branch)
         run: |
-          pip install --upgrade pip
-          pip install poetry
+          mkdir aosp-ndk
+          cd aosp-ndk
+          
+          # 根据文档初始化 master-ndk 分支
+          repo init -u https://android.googlesource.com/platform/manifest -b master-ndk --partial-clone
+          
+          # 同步代码 (并发数设为 4 避免网络拥堵)
+          repo sync -c -j4
 
-      - name: Setup Python environment for NDK (Poetry)
-        working-directory: ndk-src/ndk
+      # 4. 构建 Docker 环境
+      # 文档指出 Linux 依赖在 infra/docker 中
+      - name: Build Docker Image
+        working-directory: aosp-ndk/ndk
         run: |
-          poetry env use ../$PYTHON_PREBUILT
-          poetry install
+          docker build -t ndk-dev infra/docker
 
-      - name: Build NDK
-        working-directory: ndk-src/ndk
+      # 5. 执行构建
+      # 映射当前目录到容器内的 /src，并运行 checkbuild.py
+      # --package: 强制生成 zip 包
+      # --no-build-tests: 跳过测试以节省时间
+      # --system: 默认构建 Linux 版本。如果需要 Windows 版本，改为 windows64
+      - name: Run Build inside Docker
+        working-directory: aosp-ndk
         run: |
-          # enable poetry virtualenv
-          source $(poetry env info --path)/bin/activate
+          # 获取源码绝对路径用于映射
+          SRC_PATH=$(pwd)
+          
+          echo "Starting build..."
+          docker run --rm \
+            -u $(id -u):$(id -g) \
+            -v "$SRC_PATH":/src \
+            -w /src/ndk \
+            ndk-dev \
+            ./checkbuild.py --package --no-build-tests
+            
+          # 如果你想构建 Windows 版本，请取消注释下面这行：
+          # ./checkbuild.py --package --no-build-tests --system windows64
 
-          # build NDK (no packaging to save time)
-          python checkbuild.py --no-build-tests --permissive-python-environment
+      # 6. 处理构建产物
+      # 构建产物通常在 out/dist 目录下
+      - name: List Artifacts
+        working-directory: aosp-ndk/out/dist
+        run: ls -lh
 
-      - name: Package NDK (optional)
-        if: ${{ github.event.inputs.package == 'true' }}
-        working-directory: ndk-src/ndk
-        run: |
-          source $(poetry env info --path)/bin/activate
-          python checkbuild.py --package --permissive-python-environment
-
-      - name: Archive build output
+      # 7. 上传 NDK Zip 包
+      - name: Upload NDK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ndk-out
-          path: ndk-src/out/dist
+          name: android-ndk-linux
+          path: aosp-ndk/out/dist/*.zip
+          retention-days: 5
