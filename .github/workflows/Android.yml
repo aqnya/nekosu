@@ -40,8 +40,10 @@ jobs:
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
           -DLLVM_TARGETS_TO_BUILD="AArch64;X86;ARM" \
           -DLIBCXX_USE_COMPILER_RT=ON \
+          -DLIBUNWIND_ENABLE_SHARED=OFF \
+          -DLIBUNWIND_ENABLE_STATIC=ON \
           -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-          -DLIBUNWIND_USE_COMPILER_RT=ON \
+          -DLIBUNWIND_USE_COMPILER_RT=ON
           -DLLVM_ENABLE_LTO=OFF \
           -DLLVM_ENABLE_RTTI=ON \
           -DLLVM_ENABLE_EH=ON \
