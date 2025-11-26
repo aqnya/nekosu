@@ -31,9 +31,9 @@ jobs:
         run: |
           mkdir $HOME/ndk
           cd $HOME/ndk
-          curl -O https://dl.google.com/android/repository/android-ndk-r${BOOTSTRAP_NDK_VERSION}-linux.zip
-          unzip android-ndk-r${BOOTSTRAP_NDK_VERSION}-linux.zip
-          mv android-ndk-r* ndk
+          curl -O https://dl.google.com/android/repository/android-ndk-r26b-linux.zip
+          unzip android-ndk-r26b-linux.zip
+          mv android-ndk-r26b ndk
           echo "BOOTSTRAP_NDK=$HOME/ndk/ndk" >> $GITHUB_ENV
 
       - name: Prepare toolchain paths
