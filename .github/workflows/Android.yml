@@ -35,6 +35,7 @@ jobs:
 
       - name: Download LLVM Source
         run: |
+          cd $HOME
           git clone --depth 1 --branch ${LLVM_VERSION} https://github.com/llvm/llvm-project.git llvm-project
 
       - name: Configure (CMake)
