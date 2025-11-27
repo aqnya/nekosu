@@ -1,96 +1,88 @@
-name: Build Android NDK
+name: Build GCC for Android
 
 on:
-  workflow_dispatch: # 允许手动触发构建（推荐，因为构建时间较长）
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/ndk-build.yml'
+  workflow_dispatch:
 
 jobs:
-  build-ndk:
+  build:
     runs-on: ubuntu-latest
-    
-    # 增加超时时间，NDK 构建非常耗时
-    timeout-minutes: 360
+
+    env:
+      TARGET: aarch64-linux-android
+      ANDROID_API: 24
+      GCC_VERSION: 13.2.0
+      BINUTILS_VERSION: 2.41
 
     steps:
-      # 1. 清理磁盘空间 (AOSP 构建必须步骤)
-      # GitHub Runner 默认空间有限，不清理极大可能会在 repo sync 阶段失败
-      - name: Free Disk Space
+      - name: Install Dependencies
         run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo docker image prune --all --force
-          df -h
+          sudo apt update
+          sudo apt install -y build-essential ninja-build gperf bison flex texinfo \
+              libgmp-dev libmpfr-dev libmpc-dev wget curl unzip xz-utils
 
-      # 2. 安装并配置 Repo 工具
-      - name: Install Repo Tool
+      - name: Download Android NDK
         run: |
-          mkdir -p ~/.bin
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
-          chmod a+x ~/.bin/repo
-          echo "$HOME/.bin" >> $GITHUB_PATH
-          
-          # 配置 Git 身份（Repo 工具需要）
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git config --global color.ui false
+          wget https://dl.google.com/android/repository/android-ndk-r26c-linux.zip
+          unzip android-ndk-r26c-linux.zip
+          mv android-ndk-r26c ndk
 
-      # 3. 初始化并同步源码
-      # 使用 --partial-clone 和 -c (current branch) 最小化下载量
-      - name: Sync NDK Source (Master Branch)
+      - name: Prepare sysroot
         run: |
-          mkdir aosp-ndk
-          cd aosp-ndk
-          
-          # 根据文档初始化 master-ndk 分支
-          repo init -u https://android.googlesource.com/platform/manifest -b master-ndk --partial-clone
-          
-          # 同步代码 (并发数设为 4 避免网络拥堵)
-          repo sync -c -j4
+          SYSROOT=$PWD/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+          echo "SYSROOT=$SYSROOT" >> $GITHUB_ENV
 
-      # 4. 构建 Docker 环境
-      # 文档指出 Linux 依赖在 infra/docker 中
-      - name: Build Docker Image
-        working-directory: aosp-ndk/ndk
+      - name: Download GCC & binutils
         run: |
-          docker build -t ndk-dev infra/docker
+          wget https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz
+          tar xf binutils-${BINUTILS_VERSION}.tar.xz
+          wget https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz
+          tar xf gcc-${GCC_VERSION}.tar.xz
 
-      # 5. 执行构建
-      # 映射当前目录到容器内的 /src，并运行 checkbuild.py
-      # --package: 强制生成 zip 包
-      # --no-build-tests: 跳过测试以节省时间
-      # --system: 默认构建 Linux 版本。如果需要 Windows 版本，改为 windows64
-      - name: Run Build inside Docker
-        working-directory: aosp-ndk
+      - name: Build binutils
         run: |
-          # 获取源码绝对路径用于映射
-          SRC_PATH=$(pwd)
-          
-          echo "Starting build..."
-          docker run --rm \
-            -u $(id -u):$(id -g) \
-            -v "$SRC_PATH":/src \
-            -w /src/ndk \
-            ndk-dev \
-            ./checkbuild.py --package --no-build-tests
-            
-          # 如果你想构建 Windows 版本，请取消注释下面这行：
-          # ./checkbuild.py --package --no-build-tests --system windows64
+          mkdir build-binutils
+          cd build-binutils
+          ../binutils-${BINUTILS_VERSION}/configure \
+            --target=${TARGET} \
+            --prefix=$PWD/../toolchain \
+            --with-sysroot=$SYSROOT \
+            --disable-nls \
+            --disable-werror
+          make -j$(nproc)
+          make install
 
-      # 6. 处理构建产物
-      # 构建产物通常在 out/dist 目录下
-      - name: List Artifacts
-        working-directory: aosp-ndk/out/dist
-        run: ls -lh
+      - name: Prepare GCC prerequisites
+        run: |
+          cd gcc-${GCC_VERSION}
+          ./contrib/download_prerequisites
 
-      # 7. 上传 NDK Zip 包
-      - name: Upload NDK Artifact
-        uses: actions/upload-artifact@v4
+      - name: Build GCC stage 1 (C only)
+        run: |
+          mkdir build-gcc
+          cd build-gcc
+          ../gcc-${GCC_VERSION}/configure \
+            --target=${TARGET} \
+            --prefix=$PWD/../toolchain \
+            --with-sysroot=$SYSROOT \
+            --enable-languages=c \
+            --disable-multilib \
+            --disable-nls
+          make all-gcc -j$(nproc)
+          make install-gcc
+
+      - name: Build libgcc
+        run: |
+          cd build-gcc
+          make all-target-libgcc -j$(nproc)
+          make install-target-libgcc
+
+      - name: Archive toolchain
+        run: |
+          cd toolchain
+          tar czf ../android-gcc-toolchain.tar.gz .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
         with:
-          name: android-ndk-linux
-          path: aosp-ndk/out/dist/*.zip
-          retention-days: 5
+          name: android-gcc-toolchain
+          path: android-gcc-toolchain.tar.gz
