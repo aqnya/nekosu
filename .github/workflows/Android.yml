@@ -20,15 +20,15 @@ jobs:
           sudo apt install -y build-essential ninja-build gperf bison flex texinfo \
               libgmp-dev libmpfr-dev libmpc-dev wget curl unzip xz-utils
 
-      - name: Download Android NDK
+      - name: Download Android NDK r17c
         run: |
-          wget https://dl.google.com/android/repository/android-ndk-r26c-linux.zip
-          unzip android-ndk-r26c-linux.zip
-          mv android-ndk-r26c ndk
+          wget https://dl.google.com/android/repository/android-ndk-r17c-linux-x86_64.zip
+          unzip android-ndk-r17c-linux-x86_64.zip
+          mv android-ndk-r17c ndk
 
       - name: Prepare sysroot
         run: |
-          SYSROOT=$PWD/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
+          SYSROOT=$PWD/ndk/platforms/android-24/arch-arm64/usr
           echo "SYSROOT=$SYSROOT" >> $GITHUB_ENV
 
       - name: Download GCC & binutils
