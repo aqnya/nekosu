@@ -18,8 +18,9 @@
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
-#-renamesourcefileattribute SourceFile
-
+-renamesourcefileattribute SourceFile
+-allowaccessmodification
+-overloadaggressively
 # Keep OkHttp3 classes
 -dontwarn okhttp3.**
 -keep class okhttp3.** { *; }
@@ -37,4 +38,16 @@
 # 保留 data class（可选，通常反射也需要）
 -keep class me.neko.nksu.ui.util.GitHubRelease {
     *;
+}
+
+-keepclassmembers class me.neko.nksu.util.SigCheck {
+public boolean validate(android.content.Context);
+}
+
+-assumenosideeffects class android.util.Log {
+public static int v(...);
+public static int d(...);
+public static int i(...);
+public static int w(...);
+# keep log.e
 }
