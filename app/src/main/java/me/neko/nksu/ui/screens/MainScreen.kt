@@ -44,12 +44,24 @@ import me.neko.nksu.ui.util.UpdateChecker
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
     NavigationBar {
         BottomNavItem.Companion.items.forEach { item ->
+            val selected = currentRoute == item.route
+
             NavigationBarItem(
-                icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
-                label = { Text(text = item.title) },
-                selected = currentRoute == item.route,
+                icon = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.title
+                    )
+                },
+                label = {
+                    if (selected) {
+                        Text(text = item.title)
+                    }
+                },
+                selected = selected,
                 onClick = {
                     navController.navigate(item.route) {
                         launchSingleTop = true
