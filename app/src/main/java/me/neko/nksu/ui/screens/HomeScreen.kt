@@ -19,6 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import me.neko.nksu.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,13 +30,14 @@ import me.neko.nksu.BuildConfig
 fun HomeScreen() {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
-
+    var showInstallSheet by remember { mutableStateOf(false) }
+    
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Nekosu",
+                        text = "nekosu",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -55,6 +60,7 @@ fun HomeScreen() {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
+                showInstallSheet = true
                     // TODO: 导航到安装页面
                 },
                 colors = CardDefaults.cardColors(
@@ -109,6 +115,12 @@ fun HomeScreen() {
             )
         }
     }
+        if (showInstallSheet) {
+    InstallGuideSheet(
+        onDismiss = { showInstallSheet = false }
+    )
+}
+
 }
 
 @Composable
@@ -146,11 +158,7 @@ fun DeviceInfoCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "点击项目复制",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
+        
             }
 
             // 设备信息网格
@@ -216,26 +224,6 @@ fun DeviceInfoCard(
                         onCopy = onInfoCopy
                     )
                 }
-
-                // 第四行：应用信息
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    DeviceInfoItem(
-                        icon = Icons.Outlined.Info,
-                        title = "应用版本",
-                        value = "v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                        modifier = Modifier.weight(1f),
-                        onCopy = onInfoCopy
-                    )
-                    DeviceInfoItem(
-                        icon = Icons.Filled.Apps,
-                        title = "SDK 版本",
-                        value = "SDK ${Build.VERSION.SDK_INT}",
-                        modifier = Modifier.weight(1f),
-                        onCopy = onInfoCopy
-                    )
-                }
             }
         }
     }
@@ -252,7 +240,7 @@ fun DeviceInfoItem(
     Card(
         modifier = modifier,
         onClick = {  // 使用 onClick 自动适配圆角水波纹
-            onCopy("$title: $value")
+          //  onCopy("$title: $value")
         },
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

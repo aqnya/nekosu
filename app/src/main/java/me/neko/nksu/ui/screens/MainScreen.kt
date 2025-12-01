@@ -165,15 +165,6 @@ fun MainScreen() {
                 popExitTransition = { fadeOut(animationSpec = tween(300)) }
             ) { AboutScreen(navController) }
             composable(
-                route = "logcat",
-                enterTransition = { fadeIn(animationSpec = tween(300)) },
-                exitTransition = { fadeOut(animationSpec = tween(300)) },
-                popEnterTransition = { fadeIn(animationSpec = tween(300)) },
-                popExitTransition = { fadeOut(animationSpec = tween(300)) }
-            ) {
-                LogcatScreen(navController)
-            }
-            composable(
                 route = "open_source",
                 enterTransition = { fadeIn(animationSpec = tween(300)) },
                 exitTransition = { fadeOut(animationSpec = tween(300)) },

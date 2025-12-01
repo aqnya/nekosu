@@ -18,8 +18,8 @@ sealed class BottomNavItem(
     )
 
     object History : BottomNavItem(
-        route = "history",
-        title = "历史",
+        route = "app",
+        title = "应用",
         icon = Icons.AutoMirrored.Filled.List
     )
 

@@ -5,8 +5,8 @@ import android.app.NotificationManager
 import android.content.Context
 
 object NotificationUtil {
-    const val CHANNEL_ID = "timer_channel"
-    const val CHANNEL_NAME = "计时服务"
+    const val CHANNEL_ID = "base_service"
+    const val CHANNEL_NAME = "基础服务"
 
     fun createChannel(context: Context) {
         val chan = NotificationChannel(

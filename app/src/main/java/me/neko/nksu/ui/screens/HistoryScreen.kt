@@ -1,5 +1,6 @@
 package me.neko.nksu.ui.screens
 
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
@@ -16,14 +17,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+
+// ----------------------------
+// 数据结构
+// ----------------------------
 
 data class AppInfo(
     val name: String,
@@ -40,77 +49,103 @@ enum class FilterMode(val label: String) {
     USER("用户应用")
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HistoryScreen() {
-    val context = LocalContext.current
-    var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-    var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-    var filterMode by remember { mutableStateOf(FilterMode.USER) }
-    var menuExpanded by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var isSearching by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
+class AppViewModel(private val context: Context) : ViewModel() {
 
-    // 加载所有应用（只在启动时，不加载图标）
-    LaunchedEffect(Unit) {
+    var allApps by mutableStateOf<List<AppInfo>>(emptyList())
+        private set
+
+    var isLoaded by mutableStateOf(false)
+        private set
+
+    suspend fun loadApps() {
+        if (isLoaded) return
+
+        val pm = context.packageManager
+
         withContext(Dispatchers.IO) {
-            val pm: PackageManager = context.packageManager
             val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
-                .mapNotNull { pkgInfo ->
-                    pkgInfo.applicationInfo?.let { appInfo ->
-                        val name = appInfo.loadLabel(pm).toString()
-                        val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                        val isLaunchable = pm.getLaunchIntentForPackage(pkgInfo.packageName) != null
+                .mapNotNull { pkg ->
+                    pkg.applicationInfo?.let { ai ->
                         AppInfo(
-                            name = name,
-                            packageName = pkgInfo.packageName,
-                            uid = appInfo.uid,
-                            isSystem = isSystem,
-                            isLaunchable = isLaunchable
+                            name = ai.loadLabel(pm).toString(),
+                            packageName = pkg.packageName,
+                            uid = ai.uid,
+                            isSystem = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                            isLaunchable = pm.getLaunchIntentForPackage(pkg.packageName) != null
                         )
                     }
                 }
                 .sortedBy { it.name.lowercase() }
-            allApps = installed
 
-            // 初始时直接应用默认过滤器，避免闪烁
-            val initialApps = installed.filter { app ->
-                val passFilter = when (filterMode) {
-                    FilterMode.ALL -> true
-                    FilterMode.LAUNCHABLE -> app.isLaunchable
-                    FilterMode.SYSTEM -> app.isSystem
-                    FilterMode.USER -> !app.isSystem
-                }
-                // 初始搜索为空
-                passFilter
-            }
-            apps = initialApps
-            isLoading = false
+            allApps = installed
+            isLoaded = true
         }
     }
+}
 
-    // 根据过滤器 + 搜索条件动态更新（排除初始加载）
-    LaunchedEffect(filterMode, searchQuery) {
-        if (allApps.isNotEmpty()) {
-            apps = allApps.filter { app ->
-                // 先按过滤器筛选
+
+// ----------------------------
+// ViewModel Factory
+// ----------------------------
+
+class AppViewModelFactory(
+    private val context: Context
+) : ViewModelProvider.Factory {
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return AppViewModel(context) as T
+    }
+}
+
+
+// ----------------------------
+// Composable 页面
+// ----------------------------
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HistoryScreen() {
+
+    // 正确：在 Composable 内读取 context
+    val context = LocalContext.current.applicationContext
+
+    val viewModel: AppViewModel = viewModel(
+        factory = AppViewModelFactory(context)
+    )
+
+    var apps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var filterMode by remember { mutableStateOf(FilterMode.USER) }
+    var searchQuery by remember { mutableStateOf("") }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var isSearching by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadApps()
+    }
+
+    LaunchedEffect(viewModel.allApps, filterMode, searchQuery) {
+        val all = viewModel.allApps
+        if (all.isNotEmpty()) {
+            apps = all.filter { app ->
                 val passFilter = when (filterMode) {
                     FilterMode.ALL -> true
                     FilterMode.LAUNCHABLE -> app.isLaunchable
                     FilterMode.SYSTEM -> app.isSystem
                     FilterMode.USER -> !app.isSystem
                 }
-                // 再按搜索关键字过滤
-                val query = searchQuery.trim().lowercase()
-                val passSearch = query.isEmpty() ||
-                    app.name.lowercase().contains(query) ||
-                    app.packageName.lowercase().contains(query)
+
+                val q = searchQuery.trim().lowercase()
+                val passSearch = q.isEmpty() ||
+                    app.name.lowercase().contains(q) ||
+                    app.packageName.lowercase().contains(q)
 
                 passFilter && passSearch
             }
         }
     }
+
+    val isLoading = !viewModel.isLoaded
 
     Scaffold(
         topBar = {
@@ -144,6 +179,7 @@ fun HistoryScreen() {
                             Icon(Icons.Default.Search, contentDescription = "搜索")
                         }
                     }
+
                     Box {
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(Icons.Default.FilterList, contentDescription = "过滤")
@@ -167,78 +203,80 @@ fun HistoryScreen() {
             )
         }
     ) { innerPadding ->
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            // 三路判断
-            if (isLoading) {
-                CircularProgressIndicator()
-            } else if (apps.isEmpty()) {
-                Text("没有找到应用")
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(apps) { app ->
-                        ListItem(
-                            headlineContent = { Text(app.name) },
-                            supportingContent = { 
-                                Column {
-                                    Text(app.packageName)
-                                    Text("UID: ${app.uid}")
-                                }
-                            },
-                            leadingContent = {
-                                val localContext = LocalContext.current
-                                var iconBitmap by remember(app.packageName) { mutableStateOf<ImageBitmap?>(null) }
-                                var isLoadingIcon by remember(app.packageName) { mutableStateOf(true) }
 
-                                LaunchedEffect(app.packageName) {
-                                    withContext(Dispatchers.IO) {
-                                        try {
-                                            val drawable = localContext.packageManager.getApplicationIcon(app.packageName)
-                                            val bitmap = drawable.toBitmap()
-                                            iconBitmap = bitmap.asImageBitmap()
-                                        } catch (e: Exception) {
-                                            // 加载失败，使用默认图标
-                                        } finally {
-                                            isLoadingIcon = false
+            when {
+                isLoading -> CircularProgressIndicator()
+
+                apps.isEmpty() -> Text("没有找到应用")
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(apps) { app ->
+                            ListItem(
+                                headlineContent = { Text(app.name) },
+                                supportingContent = {
+                                    Column {
+                                        Text(app.packageName)
+                                        Text("UID: ${app.uid}")
+                                    }
+                                },
+                                leadingContent = {
+                                    val localContext = LocalContext.current
+                                    var iconBitmap by remember(app.packageName) {
+                                        mutableStateOf<ImageBitmap?>(null)
+                                    }
+                                    var isIconLoading by remember(app.packageName) {
+                                        mutableStateOf(true)
+                                    }
+
+                                    LaunchedEffect(app.packageName) {
+                                        withContext(Dispatchers.IO) {
+                                            try {
+                                                val drawable =
+                                                    localContext.packageManager.getApplicationIcon(app.packageName)
+                                                iconBitmap = drawable.toBitmap().asImageBitmap()
+                                            } catch (_: Exception) {
+                                            } finally {
+                                                isIconLoading = false
+                                            }
                                         }
                                     }
-                                }
 
-                                Box(
-                                    modifier = Modifier.size(40.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isLoadingIcon) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    } else if (iconBitmap != null) {
-                                        Image(
-                                            bitmap = iconBitmap!!,
-                                            contentDescription = app.name,
-                                            modifier = Modifier.size(40.dp)
-                                        )
-                                    } else {
-                                        Icon(
-                                            Icons.Default.Android,
-                                            contentDescription = app.name,
-                                            modifier = Modifier.size(40.dp)
-                                        )
+                                    Box(
+                                        modifier = Modifier.size(40.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        when {
+                                            isIconLoading -> CircularProgressIndicator(Modifier.size(20.dp))
+                                            iconBitmap != null -> Image(
+                                                bitmap = iconBitmap!!,
+                                                contentDescription = app.name,
+                                                modifier = Modifier.size(40.dp)
+                                            )
+                                            else -> Icon(
+                                                Icons.Default.Android,
+                                                contentDescription = app.name,
+                                                modifier = Modifier.size(40.dp)
+                                            )
+                                        }
                                     }
+                                },
+                                modifier = Modifier.clickable {
+                                    // TODO: 点击后的行为
                                 }
-                            },
-                            modifier = Modifier.clickable {
-                                // TODO: 点击后执行操作
-                            }
-                        )
-                        HorizontalDivider()
+                            )
+                            HorizontalDivider()
+                        }
                     }
                 }
             }
@@ -246,8 +284,9 @@ fun HistoryScreen() {
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
-fun HistoryScreenPreview() {
+fun PreviewHistoryScreen() {
     HistoryScreen()
 }

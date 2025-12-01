@@ -159,7 +159,7 @@ fun AboutScreen(
                         .clickable {
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                "https://github.com/bug-bit/Nekosu".toUri()
+                                "https://github.com/aqnya/nekosu".toUri()
                             )
                             context.startActivity(intent)
                         }

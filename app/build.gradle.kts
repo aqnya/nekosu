@@ -4,27 +4,34 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-fun getGitCommitCount(): Int {
+fun getGitOutput(vararg args: String, fallback: String): String {
     return try {
-        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+        val process = ProcessBuilder(*args)
             .redirectErrorStream(true)
             .start()
-        process.inputStream.bufferedReader().readText().trim().toInt()
+
+        val text = process.inputStream.bufferedReader().readText().trim()
+
+        if (text.contains("fatal") || text.contains("not a git repository", ignoreCase = true)) {
+            fallback
+        } else {
+            text.replace("[^a-zA-Z0-9._-]".toRegex(), "")
+                .ifEmpty { fallback }
+        }
     } catch (_: Exception) {
-        1 // fallback
+        fallback
     }
 }
 
-fun getGitShortHash(): String {
-    return try {
-        val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
-            .redirectErrorStream(true)
-            .start()
-        process.inputStream.bufferedReader().readText().trim()
-    } catch (_: Exception) {
-        "unknown"
-    }
+fun getGitCommitCount(): Int {
+    val text = getGitOutput("git", "rev-list", "--count", "HEAD", fallback = "1")
+    return text.toIntOrNull() ?: 1
 }
+
+fun getGitShortHash(): String {
+    return getGitOutput("git", "rev-parse", "--short", "HEAD", fallback = "unknown")
+}
+
 
 android {
     namespace = "me.neko.nksu"
@@ -43,19 +50,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // C++ configuration
-        externalNativeBuild {
-            cmake {
-                cppFlags("-std=c++17", "-frtti", "-fexceptions")
-                arguments("-DANDROID_STL=c++_shared")
-            }
-        }
-
-        // NDK ABI filters
-        ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
-        }
-    }
 
     buildTypes {
         release {
@@ -65,28 +59,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Release build optimization for C++
-            externalNativeBuild {
-                cmake {
-                    cppFlags("-O3")
-                }
-            }
-        }
-        debug {
-            // Debug flags for C++
-            externalNativeBuild {
-                cmake {
-                    cppFlags("-g", "-O0")
-                }
-            }
-        }
-    }
-
-    // External native build configuration for C++
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
         }
     }
 
@@ -126,7 +98,7 @@ android {
             }
         }
     }
-}
+}}
 
 dependencies {
     implementation(libs.androidx.core.ktx)
