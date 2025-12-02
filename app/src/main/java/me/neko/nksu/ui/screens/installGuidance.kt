@@ -78,6 +78,7 @@ fun InstallGuideSheet(
                 )
 
                 // 安装命令卡片
+                /*
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -113,7 +114,7 @@ fun InstallGuideSheet(
                             )
                         }
                     }
-                }
+                }*/
 
                 Button(
                     onClick = onDismiss,
